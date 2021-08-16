@@ -1,23 +1,23 @@
 import './styles.module.scss';
 import Nav from 'components/Nav';
-import WealthDungeon from 'components/WealthDungeon';
+import HorizontalWealthDungeon from 'components/HorizontalWealthDungeon';
 import FlashyTitle from 'components/FlashyTitle';
 import Link from 'components/Link';
 
 export type HeaderProps = {
 	/** Whether the flashy title should render at the top of the page. */
-	flashyTitle?: boolean
+	withFlashyTitle?: boolean
 };
 
-const Header = ({ flashyTitle }: HeaderProps) => (
+const Header = ({ withFlashyTitle }: HeaderProps) => (
 	<>
 		<header className="front">
 			<div className="mspface-container">
 				<Link className="mspface left" href="/" title="MSPFA Home" tabIndex={-1} draggable={false} />
-				<WealthDungeon />
+				<HorizontalWealthDungeon />
 				<Link className="mspface right" href="/" title="MSPFA Home" tabIndex={-1} draggable={false} />
 			</div>
-			{flashyTitle && <FlashyTitle />}
+			{withFlashyTitle && <FlashyTitle />}
 		</header>
 		<Nav />
 	</>

@@ -1,44 +1,49 @@
 import './styles.module.scss';
 import Page from 'components/Page';
-import { Perm } from 'modules/client/perms';
-import { withErrorPage } from 'modules/client/errors';
-import { withStatusCode } from 'modules/server/errors';
+import { Perm } from 'lib/client/perms';
+import { withErrorPage } from 'lib/client/errors';
+import { withStatusCode } from 'lib/server/errors';
 import type { FormikProps } from 'formik';
 import { Field, Form, Formik } from 'formik';
 import type { ChangeEvent, Dispatch, MouseEvent, MutableRefObject, ReactNode, SetStateAction } from 'react';
-import { useCallback, useRef, useState, useEffect, createContext, useMemo } from 'react';
-import { getChangedValues, preventLeaveConfirmations, useLeaveConfirmation } from 'modules/client/forms';
+import { useRef, useState, useEffect, createContext, useMemo } from 'react';
+import useFunction from 'lib/client/useFunction';
+import { getChangedValues, preventLeaveConfirmations, useLeaveConfirmation } from 'lib/client/forms';
 import Box from 'components/Box';
 import Button from 'components/Button';
-import type { StoryID, StoryPageID } from 'modules/server/stories';
-import { getClientStoryPage, getPrivateStory, getStoryByUnsafeID } from 'modules/server/stories';
-import type { ClientStoryPage, ClientStoryPageRecord, PrivateStory } from 'modules/client/stories';
-import deleteFromClientStoryPageRecord from 'modules/client/deleteFromClientStoryPageRecord';
-import invalidPublishedOrder from 'modules/client/invalidPublishedOrder';
+import type { StoryID, StoryPageID } from 'lib/server/stories';
+import { getClientStoryPage, getPrivateStory, getStoryByUnsafeID } from 'lib/server/stories';
+import type { ClientStoryPage, ClientStoryPageRecord, PrivateStory } from 'lib/client/stories';
+import deleteFromClientStoryPageRecord from 'lib/client/deleteFromClientStoryPageRecord';
+import invalidPublishedOrder from 'lib/client/invalidPublishedOrder';
 import BoxSection from 'components/Box/BoxSection';
-import type { APIClient } from 'modules/client/api';
+import type { APIClient } from 'lib/client/api';
 import Row from 'components/Row';
 import Label from 'components/Label';
-import api from 'modules/client/api';
-import useThrottledCallback from 'modules/client/useThrottledCallback';
+import api from 'lib/client/api';
+import useThrottled from 'lib/client/useThrottled';
 import axios from 'axios';
 import StoryEditorPageListing from 'components/StoryEditorPageListing';
 import { useIsomorphicLayoutEffect, useLatest } from 'react-use';
-import Dialog from 'modules/client/Dialog';
+import Dialog from 'lib/client/Dialog';
 import InlineRowSection from 'components/Box/InlineRowSection';
 import FieldBoxRow from 'components/Box/FieldBoxRow';
 import LabeledBoxRow from 'components/Box/LabeledBoxRow';
 import { escapeRegExp } from 'lodash';
 import BoxRow from 'components/Box/BoxRow';
 import Router, { useRouter } from 'next/router';
-import frameThrottler, { frameThrottlerRequests } from 'modules/client/frameThrottler';
-import shouldIgnoreControl from 'modules/client/shouldIgnoreControl';
-import { addViewportListener, removeViewportListener } from 'modules/client/viewportListener';
+import frameThrottler from 'lib/client/frameThrottler';
+import shouldIgnoreControl from 'lib/client/shouldIgnoreControl';
+import { addViewportListener, removeViewportListener } from 'lib/client/viewportListener';
 import { useNavStoryID } from 'components/Nav';
+import type { integer } from 'lib/types';
+import useSticky from 'lib/client/useSticky';
 
 type StoryAPI = APIClient<typeof import('pages/api/stories/[storyID]').default>;
 type StoryPagesAPI = APIClient<typeof import('pages/api/stories/[storyID]/pages').default>;
 type StoryMovePagesAPI = APIClient<typeof import('pages/api/stories/[storyID]/movePages').default>;
+
+const getScrollPaddingTop = () => +document.documentElement.style.scrollPaddingTop.slice(0, -2);
 
 export type Values = {
 	/** An object mapping page IDs to their respective pages. Since this object has numeric keys, standard JavaScript automatically sorts its properties by lowest first. */
@@ -55,7 +60,7 @@ export const _key = Symbol('key');
 /** A `ClientStoryPage` with a React key. */
 export type KeyedClientStoryPage = ClientStoryPage & {
 	/** This page's React key. */
-	[_key]: number
+	[_key]: integer
 };
 
 const defaultGridCullingInfo = {
@@ -86,8 +91,8 @@ export const StoryEditorContext = createContext<{
 	setInitialPages: Dispatch<SetStateAction<ClientStoryPageRecord>>,
 	queuedValuesRef: MutableRefObject<Values | undefined>,
 	isSubmitting: boolean,
-	cachedPageHeightsRef: MutableRefObject<Partial<Record<number, number>>>,
-	toggleAdvancedShown: (pageKey: number) => void
+	cachedPageHeightsRef: MutableRefObject<Partial<Record<StoryPageID, number>>>,
+	toggleAdvancedShown: (pageKey: integer) => void
 }>(undefined!);
 
 const calculateGridSizeInfo = (
@@ -156,7 +161,7 @@ type ServerSideProps = {
 	privateStory: PrivateStory,
 	pages: ClientStoryPageRecord
 } | {
-	statusCode: number
+	statusCode: integer
 };
 
 const Component = withErrorPage<ServerSideProps>(({
@@ -175,7 +180,7 @@ const Component = withErrorPage<ServerSideProps>(({
 
 	const cancelTokenSourceRef = useRef<ReturnType<typeof axios.CancelToken.source>>();
 
-	const changeDefaultPageTitle = useThrottledCallback(async (event: ChangeEvent<HTMLInputElement>) => {
+	const changeDefaultPageTitle = useThrottled(async (event: ChangeEvent<HTMLInputElement>) => {
 		setPrivateStory({
 			...privateStory,
 			defaultPageTitle: event.target.value
@@ -193,7 +198,7 @@ const Component = withErrorPage<ServerSideProps>(({
 		cancelTokenSourceRef.current = undefined;
 	}, [privateStory]);
 
-	const onChangeDefaultPageTitle = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+	const onChangeDefaultPageTitle = useFunction((event: ChangeEvent<HTMLInputElement>) => {
 		cancelTokenSourceRef.current?.cancel();
 
 		if (!event.target.reportValidity()) {
@@ -201,9 +206,9 @@ const Component = withErrorPage<ServerSideProps>(({
 		}
 
 		changeDefaultPageTitle(event);
-	}, [changeDefaultPageTitle]);
+	});
 
-	const findAndReplace = useCallback(async () => {
+	const findAndReplace = useFunction(async () => {
 		const dialog = new Dialog({
 			id: 'find-and-replace',
 			title: 'Find and Replace',
@@ -289,14 +294,14 @@ const Component = withErrorPage<ServerSideProps>(({
 								type="checkbox"
 								checked={!values.flags.includes('i')}
 								onChange={
-									useCallback((event: ChangeEvent<HTMLInputElement>) => {
+									useFunction((event: ChangeEvent<HTMLInputElement>) => {
 										setFieldValue(
 											'flags',
 											event.target.checked
 												? values.flags.replace(/i/g, '')
 												: `${values.flags}i`
 										);
-									}, [setFieldValue, values.flags])
+									})
 								}
 							/>
 						</LabeledBoxRow>
@@ -344,9 +349,9 @@ const Component = withErrorPage<ServerSideProps>(({
 				formikPropsRef.current.setFieldValue(`pages.${page.id}.content`, replacedContent);
 			}
 		}
-	}, []);
+	});
 
-	const jumpToPage = useCallback(async () => {
+	const jumpToPage = useFunction(async () => {
 		const dialog = new Dialog({
 			id: 'jump-to-page',
 			title: 'Jump to Page',
@@ -378,9 +383,9 @@ const Component = withErrorPage<ServerSideProps>(({
 
 		location.hash = '';
 		location.hash = `p${dialog.form!.values.pageID}`;
-	}, []);
+	});
 
-	const newPage = useCallback(() => {
+	const newPage = useFunction(() => {
 		const pages = Object.values(formikPropsRef.current.values.pages);
 
 		// Get the ID of a new page being added after the last one.
@@ -411,7 +416,7 @@ const Component = withErrorPage<ServerSideProps>(({
 			// Select the title field of the newly added page.
 			(document.getElementById(`field-pages-${id}-title`) as HTMLInputElement | null)?.select();
 		});
-	}, [privateStory.defaultPageTitle]);
+	});
 
 	return (
 		<Page heading="Edit Adventure">
@@ -420,7 +425,7 @@ const Component = withErrorPage<ServerSideProps>(({
 					pages: initialPages
 				}}
 				onSubmit={
-					useCallback(async values => {
+					useFunction(async values => {
 						const changedValues = getChangedValues(initialPages, values.pages);
 
 						if (!changedValues) {
@@ -440,7 +445,7 @@ const Component = withErrorPage<ServerSideProps>(({
 							...initialPages,
 							...newInitialPages
 						});
-					}, [privateStory.id, initialPages])
+					})
 				}
 				// Even though we have no `validate` function, these three props are necessary to set as a significant performance optimization.
 				validateOnChange={false}
@@ -512,11 +517,11 @@ const Component = withErrorPage<ServerSideProps>(({
 					}
 
 					// This state is an array of the keys of pages whose advanced section is toggled open.
-					const [advancedShownPageKeys, setAdvancedShownPageKeys] = useState<number[]>([]);
+					const [advancedShownPageKeys, setAdvancedShownPageKeys] = useState<integer[]>([]);
 					/** A ref to the latest value of `advancedShownPageKeys` to reduce unnecessary callback dependencies. */
 					const advancedShownPageKeysRef = useLatest(advancedShownPageKeys);
 
-					const onClickPageTile = useCallback((event: MouseEvent<HTMLDivElement> & { target: HTMLDivElement }) => {
+					const onClickPageTile = useFunction((event: MouseEvent<HTMLDivElement> & { target: HTMLDivElement }) => {
 						const pageID = +event.target.id.slice(1);
 
 						const newSelectedPages = [...selectedPages];
@@ -527,7 +532,7 @@ const Component = withErrorPage<ServerSideProps>(({
 
 							// If the user is not holding `ctrl` or `⌘`, deselect all pages outside the target range.
 							if (!(event.ctrlKey || event.metaKey)) {
-								while (newSelectedPages.pop()) {}
+								newSelectedPages.length = 0;
 							}
 
 							// Select all the pages in the range between `lastActivePageIDRef.current` and `pageID` (inclusive).
@@ -548,18 +553,18 @@ const Component = withErrorPage<ServerSideProps>(({
 						}
 
 						setSelectedPages(newSelectedPages);
-					}, [selectedPages]);
+					});
 
-					const deselectAll = useCallback(() => {
+					const deselectAll = useFunction(() => {
 						setSelectedPages([]);
-					}, []);
+					});
 
-					const selectAll = useCallback(() => {
+					const selectAll = useFunction(() => {
 						setSelectedPages(Object.values(formikPropsRef.current.values.pages).map(({ id }) => id));
-					}, []);
+					});
 
 					/** Mutates `selectedPages` to be sorted in ascending order and returns a user-friendly string describing the ranges of selected pages. */
-					const sortAndGetSelectedPages = useCallback(() => {
+					const sortAndGetSelectedPages = useFunction(() => {
 						/** An array of objects representing closed intervals of selected page IDs. */
 						const selectedPageRanges: Array<{
 							/** The lower bound of this interval. */
@@ -598,9 +603,9 @@ const Component = withErrorPage<ServerSideProps>(({
 									? `${rangeStrings[0]} and ${rangeStrings[1]}`
 									: `${rangeStrings.slice(0, -1).join(', ')}, and ${rangeStrings[rangeStrings.length - 1]}`
 						);
-					}, [selectedPages]);
+					});
 
-					const deleteSelectedPages = useCallback(async () => {
+					const deleteSelectedPages = useFunction(async () => {
 						formikPropsRef.current.setSubmitting(true);
 
 						if (!(
@@ -691,9 +696,9 @@ const Component = withErrorPage<ServerSideProps>(({
 						setInitialPages(newPages);
 
 						formikPropsRef.current.setSubmitting(false);
-					}, [selectedPages, storyID, sortAndGetSelectedPages, advancedShownPageKeysRef]);
+					});
 
-					const moveSelectedPages = useCallback(async () => {
+					const moveSelectedPages = useFunction(async () => {
 						formikPropsRef.current.setSubmitting(true);
 
 						const selectedPagesString = sortAndGetSelectedPages();
@@ -705,7 +710,7 @@ const Component = withErrorPage<ServerSideProps>(({
 						const lastSelectedPage = formikPropsRef.current.values.pages[selectedPages[selectedPages.length - 1]];
 
 						/** The position to insert the pages at. */
-						let position: number | undefined;
+						let position: integer | undefined;
 
 						const dialog = new Dialog({
 							id: 'move-pages',
@@ -829,7 +834,7 @@ const Component = withErrorPage<ServerSideProps>(({
 						setSelectedPages(selectedPages.map(pageID => changedPageIDs[pageID]));
 
 						formikPropsRef.current.setSubmitting(false);
-					}, [selectedPages, pageValues.length, sortAndGetSelectedPages, storyID]);
+					});
 
 					// When `viewMode === 'list'`, this state is a record that maps page IDs to a boolean of their `culled` prop, or to undefined if the page hasn't been processed by `updateCulledPages` yet.
 					const [culledPages, setCulledPages] = useState<Partial<Record<StoryPageID, boolean>>>({});
@@ -847,7 +852,7 @@ const Component = withErrorPage<ServerSideProps>(({
 					const defaultCulledHeightUnsetRef = useRef(true);
 
 					/** A ref to a partial record that maps each page's key to its cached height when `viewMode === 'list'`. */
-					const cachedPageHeightsRef = useRef<Partial<Record<number, number>>>({});
+					const cachedPageHeightsRef = useRef<Partial<Record<integer, number>>>({});
 					// Keys are used instead of page IDs so that cached heights are preserved correctly when pages are deleted or rearranged.
 
 					// This state is some information useful for culling when `viewMode === 'grid'`.
@@ -867,6 +872,10 @@ const Component = withErrorPage<ServerSideProps>(({
 
 					/** A ref to whether `updateLocationHash` has been called yet and shouldn't be called again without a `hashchange` event. */
 					const calledUpdateLocationHashRef = useRef(false);
+
+					/** A ref to the `#story-editor-actions` element. */
+					const actionsElementRef = useRef<HTMLDivElement>(null!);
+					useSticky(actionsElementRef);
 
 					useEffect(() => {
 						const url = new URL(location.href);
@@ -898,36 +907,11 @@ const Component = withErrorPage<ServerSideProps>(({
 								if (
 									pageID > 0
 									&& pageID <= lastPageID
-									// Check if the target location hash is a culled page.
 								) {
 									// Jump to where the target page is if it isn't culled, or where it would be if it weren't culled.
 
 									// We can assert this is non-null because we have verified in that the target page exists, and if a page exists, then at least one page element (though not necessarily the one we're jumping to) must be mounted.
 									const firstPageElement = document.getElementsByClassName('story-editor-page')[0] as HTMLDivElement;
-
-									/** Offsets the inputted `scrollTop` by a certain amount for the user's convenience. */
-									const offsetScrollTop = (scrollTop: number) => {
-										const actionsStyle = window.getComputedStyle(actionsElementRef.current);
-
-										if (actionsStyle.position === 'sticky') {
-											const actionsRect = actionsElementRef.current.getBoundingClientRect();
-											const actionsStyleTop = +actionsStyle.top.slice(0, -2);
-
-											return scrollTop - (
-												// Check if this element is currently stuck to its `style.top`.
-												actionsRect.top === actionsStyleTop
-												// If the actions element isn't stuck, then check if it would be after this function's scroll.
-												|| scrollTop >= document.documentElement.scrollTop + actionsRect.top + actionsRect.height
-													? actionsStyleTop + actionsRect.height
-													: 0
-											) - (
-												// Add an extra 4 pixels if `viewMode === 'list'` because it looks weird having the page listing up against the top of the screen.
-												viewMode === 'list' ? 4 : 0
-											);
-										}
-
-										return scrollTop;
-									};
 
 									if (viewMode === 'list') {
 										let offsetTop = firstPageElement.offsetTop;
@@ -952,7 +936,7 @@ const Component = withErrorPage<ServerSideProps>(({
 											}
 										}
 
-										document.documentElement.scrollTop = offsetScrollTop(offsetTop);
+										document.documentElement.scrollTop = offsetTop - getScrollPaddingTop();
 									} else {
 										// If this point is reached, `viewMode === 'grid'`.
 
@@ -971,7 +955,7 @@ const Component = withErrorPage<ServerSideProps>(({
 											) / pagesPerRow
 										);
 
-										document.documentElement.scrollTop = offsetScrollTop(pageContainer.offsetTop + pageRow * pageHeight);
+										document.documentElement.scrollTop = pageContainer.offsetTop + pageRow * pageHeight - getScrollPaddingTop();
 									}
 								}
 							}
@@ -980,7 +964,7 @@ const Component = withErrorPage<ServerSideProps>(({
 						window.addEventListener('hashchange', updateLocationHash);
 
 						if (!calledUpdateLocationHashRef.current) {
-							// This timeout is necessary to wait for the browser to jump to the location hash first so that `updateLocationHash` can run afterward uninterrupted, and also so `updateCulledPages` can update `defaultCulledHeight`.
+							// This timeout is necessary to wait for the browser to jump to the initial location hash first so that `updateLocationHash` can run afterward uninterrupted, and also so `updateCulledPages` can update `defaultCulledHeight`.
 							setTimeout(updateLocationHash);
 
 							calledUpdateLocationHashRef.current = true;
@@ -1056,9 +1040,6 @@ const Component = withErrorPage<ServerSideProps>(({
 							document.removeEventListener('keydown', onKeyDown);
 						};
 					}, [viewMode, sortMode, selectAll, deselectAll, deleteSelectedPages, gridCullingInfoRef, culledPagesRef, defaultCulledHeightRef]);
-
-					/** A ref to the `#story-editor-actions` element. */
-					const actionsElementRef = useRef<HTMLDivElement>(null!);
 
 					// This is a layout effect rather than a normal effect to reduce the time the user can briefly see culled pages.
 					useIsomorphicLayoutEffect(() => {
@@ -1242,29 +1223,12 @@ const Component = withErrorPage<ServerSideProps>(({
 							}
 						};
 
-						/** A function called whenever the viewport changes. */
-						const updateViewport = () => {
-							updateCulledPages();
-
-							const actionsStyle = window.getComputedStyle(actionsElementRef.current);
-							if (actionsStyle.position === 'sticky') {
-								actionsElementRef.current.classList[
-									actionsElementRef.current.getBoundingClientRect().top === +actionsStyle.top.slice(0, -2)
-										? 'add'
-										: 'remove'
-								]('stuck');
-							}
-						};
-
-						const _updateViewportOrCulledPages = addViewportListener(updateViewport);
+						const _updateCulledPages = addViewportListener(updateCulledPages);
 
 						/** Calls `updateCulledPages` throttled by `frameThrottler`. */
 						const throttledUpdateCulledPages = () => {
-							// Don't call `frameThrottler` if there is possibly already a pending animation frame request from `throttledUpdateViewport`, since this would then overwrite it and cancel the `updateViewport` call, which includes a call to `updateCulledPages` anyway.
-							if (!frameThrottlerRequests[_updateViewportOrCulledPages]) {
-								frameThrottler(_updateViewportOrCulledPages)
-									.then(updateCulledPages);
-							}
+							frameThrottler(_updateCulledPages)
+								.then(updateCulledPages);
 						};
 
 						// We use `focusin` instead of `focus` because the former bubbles while the latter doesn't, and we want to capture any focus event among the page elements.
@@ -1272,11 +1236,11 @@ const Component = withErrorPage<ServerSideProps>(({
 						// We don't listen to `focusout` because, when `focusout` is dispatched, `document.activeElement` is set to `null`, causing any page element outside the view which the user is attempting to focus to instead be culled.
 						// Also, listening to `focusout` isn't necessary for any pragmatic reason, and not doing so improves performance significantly by updating the culled page elements half as often when frequently changing focus.
 
-						// Call `updateViewport` synchronously so the user can't see culled pages for a frame.
-						updateViewport();
+						// Call `updateCulledPages` synchronously so the user can't see culled pages for a frame.
+						updateCulledPages();
 
 						return () => {
-							removeViewportListener(_updateViewportOrCulledPages);
+							removeViewportListener(_updateCulledPages);
 							document.removeEventListener('focusin', throttledUpdateCulledPages);
 						};
 					}, [defaultCulledHeight, pageValues.length, viewMode, sortMode, culledPagesRef, gridCullingInfoRef]);
@@ -1303,7 +1267,7 @@ const Component = withErrorPage<ServerSideProps>(({
 
 						const iteratePage = (
 							/** The index of this page in `pageValues`. */
-							i: number
+							i: integer
 						) => {
 							// This is typed as nullable because `i` may not index a real page if there should be no pages in view.
 							const page = pageValues[i] as KeyedClientStoryPage | undefined;
@@ -1411,9 +1375,9 @@ const Component = withErrorPage<ServerSideProps>(({
 					}
 
 					/** Toggles whether a page listing's advanced section is open. */
-					const toggleAdvancedShown = useCallback((
+					const toggleAdvancedShown = useFunction((
 						/** The key of the page to toggle the advanced section of. */
-						pageKey: number
+						pageKey: integer
 					) => {
 						const pageKeyIndex = advancedShownPageKeysRef.current.indexOf(pageKey);
 						if (pageKeyIndex === -1) {
@@ -1429,7 +1393,7 @@ const Component = withErrorPage<ServerSideProps>(({
 								...advancedShownPageKeysRef.current.slice(pageKeyIndex + 1, advancedShownPageKeysRef.current.length)
 							]);
 						}
-					}, [advancedShownPageKeysRef]);
+					});
 
 					/**
 					 * The values to pass into the `value` of the `StoryEditorContext`.
@@ -1483,7 +1447,7 @@ const Component = withErrorPage<ServerSideProps>(({
 											title={`Set View Mode to ${viewMode === 'grid' ? 'List' : 'Grid'}`}
 											disabled={formikPropsRef.current.isSubmitting}
 											onClick={
-												useCallback(() => {
+												useFunction(() => {
 													if (formikPropsRef.current.dirty) {
 														new Dialog({
 															id: 'story-editor-view-mode',
@@ -1493,9 +1457,8 @@ const Component = withErrorPage<ServerSideProps>(({
 														return;
 													}
 
-													// Toggle the `viewMode` between `'list'` and `'grid'`.
-													setViewMode(viewMode => viewMode === 'list' ? 'grid' : 'list');
-												}, [])
+													setViewMode(viewMode === 'list' ? 'grid' : 'list');
+												})
 											}
 										>
 											{`View: ${viewMode === 'grid' ? 'Grid' : 'List'}`}
@@ -1529,9 +1492,9 @@ const Component = withErrorPage<ServerSideProps>(({
 											className="spaced"
 											defaultValue={sortMode}
 											onChange={
-												useCallback((event: ChangeEvent<HTMLSelectElement>) => {
+												useFunction((event: ChangeEvent<HTMLSelectElement>) => {
 													setSortMode(event.target.value as 'newest' | 'oldest');
-												}, [])
+												})
 											}
 										>
 											<option value="newest">Newest</option>
@@ -1547,6 +1510,9 @@ const Component = withErrorPage<ServerSideProps>(({
 										className="mid"
 										ref={actionsElementRef}
 									>
+										<Button id="story-editor-back-to-top" href="#">
+											Back to Top
+										</Button>
 										<Button
 											disabled={formikPropsRef.current.isSubmitting}
 											onClick={newPage}

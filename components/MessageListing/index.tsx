@@ -1,18 +1,19 @@
 import './styles.module.scss';
 import IconImage from 'components/IconImage';
-import type { ClientMessage } from 'modules/client/messages';
+import type { ClientMessage } from 'lib/client/messages';
 import Link from 'components/Link';
 import type { ChangeEvent, MutableRefObject } from 'react';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import useFunction from 'lib/client/useFunction';
 import BBCode, { sanitizeBBCode } from 'components/BBCode';
-import { useUserCache } from 'modules/client/UserCache';
+import { useUserCache } from 'lib/client/UserCache';
 import Timestamp from 'components/Timestamp';
-import { setUser, useUser } from 'modules/client/users';
-import api from 'modules/client/api';
-import type { APIClient, APIError } from 'modules/client/api';
+import { setUser, useUser } from 'lib/client/users';
+import api from 'lib/client/api';
+import type { APIClient, APIError } from 'lib/client/api';
 import Button from 'components/Button';
 import RemoveButton from 'components/Button/RemoveButton';
-import Dialog from 'modules/client/Dialog';
+import Dialog from 'lib/client/Dialog';
 import { useIsomorphicLayoutEffect, useLatest } from 'react-use';
 import ReplyButton from 'components/Button/ReplyButton';
 import UserLink from 'components/Link/UserLink';
@@ -134,7 +135,7 @@ const MessageListing = ({
 	// We can use an empty object as the initial value of the above ref because the ref's value is then immediately set below.
 
 	const { markRead } = message.ref.current = {
-		markRead: useCallback(async read => {
+		markRead: useFunction(async read => {
 			if (loading || !userIsParticipantRef.current || message.read === read) {
 				return;
 			}
@@ -195,8 +196,8 @@ const MessageListing = ({
 					unreadMessageCount
 				});
 			}
-		}, [message, loading, setMessageRef, user, userIsParticipantRef, userRef]),
-		deleteMessage: useCallback(async () => {
+		}),
+		deleteMessage: useFunction(async () => {
 			if (loading || !userIsParticipantRef.current) {
 				return;
 			}
@@ -229,23 +230,23 @@ const MessageListing = ({
 			}
 
 			removeListingRef.current(message);
-		}, [loading, message, user, userRef, userIsParticipantRef, removeListingRef])
+		})
 	};
 
-	const toggleRead = useCallback(() => {
+	const toggleRead = useFunction(() => {
 		markRead(!message.read);
-	}, [markRead, message.read]);
+	});
 
-	const showMore = useCallback(() => {
+	const showMore = useFunction(() => {
 		setOpen(true);
 		markRead(true);
-	}, [markRead]);
+	});
 
-	const showLess = useCallback(() => {
+	const showLess = useFunction(() => {
 		setOpen(false);
-	}, []);
+	});
 
-	const confirmDeleteMessage = useCallback(async () => {
+	const confirmDeleteMessage = useFunction(async () => {
 		if (loading || !(
 			userIsParticipantRef.current
 			&& await Dialog.confirm({
@@ -266,7 +267,7 @@ const MessageListing = ({
 		}
 
 		message.ref!.current.deleteMessage();
-	}, [loading, message.subject, userIsParticipantRef, message.ref]);
+	});
 
 	return (
 		<div
@@ -278,12 +279,12 @@ const MessageListing = ({
 					type="checkbox"
 					checked={message.selected}
 					onChange={
-						useCallback((event: ChangeEvent<HTMLInputElement>) => {
+						useFunction((event: ChangeEvent<HTMLInputElement>) => {
 							setMessageRef.current({
 								...message,
 								selected: event.target.checked
 							});
-						}, [setMessageRef, message])
+						})
 					}
 				/>
 			</label>
@@ -295,12 +296,12 @@ const MessageListing = ({
 				<IconImage
 					className="listing-icon"
 					src={fromUser?.icon}
-					alt={fromUser && `${fromUser.name}'s Icon`}
+					alt={fromUser ? `${fromUser.name}'s Icon` : 'Deleted User\'s Icon'}
 				/>
 			</Link>
 			<div className="listing-info">
 				<Link
-					className="listing-title translucent-text"
+					className="listing-title translucent"
 					href={`/message/${message.id}`}
 					title={message.subject}
 				>

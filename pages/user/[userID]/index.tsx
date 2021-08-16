@@ -1,10 +1,10 @@
 import './styles.module.scss';
 import Page from 'components/Page';
-import { useUser } from 'modules/client/users';
-import type { PublicUser } from 'modules/client/users';
-import { getUserByUnsafeID, getPublicUser } from 'modules/server/users';
-import { withErrorPage } from 'modules/client/errors';
-import { withStatusCode } from 'modules/server/errors';
+import { useUser } from 'lib/client/users';
+import type { PublicUser } from 'lib/client/users';
+import { getUserByUnsafeID, getPublicUser } from 'lib/server/users';
+import { withErrorPage } from 'lib/client/errors';
+import { withStatusCode } from 'lib/server/errors';
 import Box from 'components/Box';
 import BoxColumns from 'components/Box/BoxColumns';
 import BoxSection from 'components/Box/BoxSection';
@@ -14,21 +14,22 @@ import Timestamp from 'components/Timestamp';
 import Link from 'components/Link';
 import BoxFooter from 'components/Box/BoxFooter';
 import IconImage from 'components/IconImage';
-import { Perm } from 'modules/client/perms';
+import { Perm } from 'lib/client/perms';
 import BoxRow from 'components/Box/BoxRow';
 import BBCode from 'components/BBCode';
-import { getPublicStoriesByEditor } from 'modules/server/stories';
-import type { PublicStory } from 'modules/client/stories';
+import { getPublicStoriesByEditor } from 'lib/server/stories';
+import type { PublicStory } from 'lib/client/stories';
 import List from 'components/List';
 import StoryListing from 'components/StoryListing';
 import Button from 'components/Button';
+import type { integer } from 'lib/types';
 
 type ServerSideProps = {
 	publicUser: PublicUser,
 	publicStories: PublicStory[],
 	favsPublic: boolean
 } | {
-	statusCode: number
+	statusCode: integer
 };
 
 const Component = withErrorPage<ServerSideProps>(({ publicUser, publicStories, favsPublic }) => {
@@ -37,7 +38,7 @@ const Component = withErrorPage<ServerSideProps>(({ publicUser, publicStories, f
 	const notOwnProfile = user?.id !== publicUser.id;
 
 	return (
-		<Page flashyTitle heading="Profile">
+		<Page withFlashyTitle heading="Profile">
 			<Box id="profile">
 				<BoxColumns>
 					<BoxSection id="profile-info" heading="Info">
@@ -49,7 +50,6 @@ const Component = withErrorPage<ServerSideProps>(({ publicUser, publicStories, f
 								id="profile-icon"
 								src={publicUser.icon}
 								alt={`${publicUser.name}'s Icon`}
-								title={`${publicUser.name}'s Icon`}
 							/>
 						</BoxRow>
 						<BoxRow id="profile-actions">

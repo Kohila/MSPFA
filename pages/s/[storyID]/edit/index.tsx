@@ -1,29 +1,30 @@
 import './styles.module.scss';
 import Page from 'components/Page';
-import { Perm } from 'modules/client/perms';
-import { withErrorPage } from 'modules/client/errors';
-import { withStatusCode } from 'modules/server/errors';
+import { Perm } from 'lib/client/perms';
+import { withErrorPage } from 'lib/client/errors';
+import { withStatusCode } from 'lib/server/errors';
 import { Field, Form, Formik } from 'formik';
 import type { ChangeEvent } from 'react';
-import { useCallback, useState } from 'react';
-import { getChangedValues, useLeaveConfirmation } from 'modules/client/forms';
+import { useState } from 'react';
+import useFunction from 'lib/client/useFunction';
+import { getChangedValues, useLeaveConfirmation } from 'lib/client/forms';
 import Box from 'components/Box';
 import BoxFooter from 'components/Box/BoxFooter';
 import Button from 'components/Button';
-import { getPrivateStory, getStoryByUnsafeID } from 'modules/server/stories';
-import type { PrivateStory } from 'modules/client/stories';
-import { StoryPrivacy, storyPrivacyNames, storyStatusNames } from 'modules/client/stories';
+import { getPrivateStory, getStoryByUnsafeID } from 'lib/server/stories';
+import type { PrivateStory } from 'lib/client/stories';
+import { StoryPrivacy, storyPrivacyNames, storyStatusNames } from 'lib/client/stories';
 import BoxRowSection from 'components/Box/BoxRowSection';
 import FieldBoxRow from 'components/Box/FieldBoxRow';
 import BoxRow from 'components/Box/BoxRow';
 import IconImage from 'components/IconImage';
 import LabeledBoxRow from 'components/Box/LabeledBoxRow';
 import UserField from 'components/UserField';
-import type { PublicUser } from 'modules/client/users';
-import { useUser } from 'modules/client/users';
-import { useUserCache } from 'modules/client/UserCache';
+import type { PublicUser } from 'lib/client/users';
+import { useUser } from 'lib/client/users';
+import { useUserCache } from 'lib/client/UserCache';
 import { uniq, uniqBy } from 'lodash';
-import users, { getPublicUser } from 'modules/server/users';
+import users, { getPublicUser } from 'lib/server/users';
 import UserArrayField from 'components/UserField/UserArrayField';
 import BoxColumns from 'components/Box/BoxColumns';
 import BoxSection from 'components/Box/BoxSection';
@@ -31,13 +32,14 @@ import Label from 'components/Label';
 import BBField from 'components/BBCode/BBField';
 import Row from 'components/Row';
 import TagField from 'components/TagField';
-import type { APIClient } from 'modules/client/api';
-import api from 'modules/client/api';
+import type { APIClient } from 'lib/client/api';
+import api from 'lib/client/api';
 import DateField from 'components/DateField';
 import Timestamp from 'components/Timestamp';
 import EditButton from 'components/Button/EditButton';
-import Dialog from 'modules/client/Dialog';
+import Dialog from 'lib/client/Dialog';
 import { useNavStoryID } from 'components/Nav';
+import type { integer } from 'lib/types';
 
 type StoryAPI = APIClient<typeof import('pages/api/stories/[storyID]').default>;
 
@@ -57,14 +59,13 @@ const getValuesFromStory = (privateStory: PrivateStory) => ({
 		site: ''
 	},
 	description: privateStory.description,
-	blurb: privateStory.blurb,
 	icon: privateStory.icon,
 	banner: privateStory.banner,
 	style: privateStory.style,
-	disableUserTheme: privateStory.disableUserTheme,
 	script: privateStory.script,
 	tags: privateStory.tags,
-	allowComments: privateStory.allowComments
+	allowComments: privateStory.allowComments,
+	sidebarContent: privateStory.sidebarContent
 });
 
 type Values = ReturnType<typeof getValuesFromStory>;
@@ -73,7 +74,7 @@ type ServerSideProps = {
 	privateStory: PrivateStory,
 	userCache: PublicUser[]
 } | {
-	statusCode: number
+	statusCode: integer
 };
 
 const Component = withErrorPage<ServerSideProps>(({
@@ -98,21 +99,21 @@ const Component = withErrorPage<ServerSideProps>(({
 
 	const [editingAnniversary, setEditingAnniversary] = useState(false);
 
-	const editAnniversary = useCallback(async () => {
+	const editAnniversary = useFunction(async () => {
 		if (!await Dialog.confirm({
 			id: 'edit-anniversary',
-			title: 'Edit Anniversary',
-			content: 'You can only change this adventure\'s anniversary date once.\n\nOnce changed, it cannot be undone.\n\nAre you sure you want to edit the anniversary date?'
+			title: 'Edit Creation Date',
+			content: 'You can only change this adventure\'s creation date once.\n\nOnce changed, it cannot be undone.\n\nAre you sure you want to edit the creation date?'
 		})) {
 			return;
 		}
 
 		setEditingAnniversary(true);
-	}, []);
+	});
 
 	const [loadingRestore, setLoadingRestore] = useState(false);
 
-	const restoreStory = useCallback(async () => {
+	const restoreStory = useFunction(async () => {
 		setLoadingRestore(true);
 
 		const { data: newPrivateStory } = await (api as StoryAPI).put(`/stories/${privateStory.id}`, {
@@ -122,9 +123,9 @@ const Component = withErrorPage<ServerSideProps>(({
 		});
 
 		setPrivateStory(newPrivateStory);
-	}, [privateStory.id]);
+	});
 
-	const onSubmit = useCallback(async (values: Values) => {
+	const onSubmit = useFunction(async (values: Values) => {
 		const changedValues = getChangedValues(initialValues, values);
 
 		if (!changedValues) {
@@ -151,10 +152,7 @@ const Component = withErrorPage<ServerSideProps>(({
 		setPrivateStory(newPrivateStory);
 
 		setEditingAnniversary(false);
-
-		// This ESLint comment is necessary because the rule incorrectly thinks `initialValues` should be a dependency here, despite that it depends on `privateStory` which is already a dependency.
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [privateStory, initialValues]);
+	});
 
 	const daysUntilDeletion = privateStory.willDelete !== undefined && (
 		Math.round(
@@ -197,7 +195,7 @@ const Component = withErrorPage<ServerSideProps>(({
 
 						const [ownerBeforeEdit, setOwnerBeforeEdit] = useState<string | undefined>(values.owner || privateStory.owner);
 
-						const deleteStory = useCallback(async () => {
+						const deleteStory = useFunction(async () => {
 							if (!(
 								shouldLeave()
 								&& await Dialog.confirm({
@@ -244,13 +242,32 @@ const Component = withErrorPage<ServerSideProps>(({
 							setPrivateStory(newPrivateStory);
 
 							setEditingAnniversary(false);
-						}, [shouldLeave, setSubmitting]);
+						});
 
 						return (
 							<Form>
 								<Box>
+									<BoxSection
+										id="story-editor-options"
+										heading={privateStory.title}
+									>
+										{privateStory.pageCount && (
+											<Button
+												className="small"
+												href={`/?s=${privateStory.id}&p=1`}
+											>
+												View
+											</Button>
+										)}
+										<Button
+											className="small"
+											href={`/s/${privateStory.id}/edit/p`}
+										>
+											Edit Pages
+										</Button>
+									</BoxSection>
 									<BoxColumns>
-										<BoxRowSection id="story-info" heading="Info">
+										<BoxRowSection id="story-editor-info" heading="Info">
 											<FieldBoxRow
 												name="title"
 												label="Title"
@@ -280,7 +297,7 @@ const Component = withErrorPage<ServerSideProps>(({
 												help={`${storyPrivacyNames[StoryPrivacy.Public]}: Anyone can see this adventure.\n${storyPrivacyNames[StoryPrivacy.Unlisted]}: Only users with this adventure's URL can see this adventure.\n${storyPrivacyNames[StoryPrivacy.Private]}: Only this adventure's owner and editors can see this adventure.`}
 												required
 												onChange={
-													useCallback((event: ChangeEvent<HTMLSelectElement>) => {
+													useFunction((event: ChangeEvent<HTMLSelectElement>) => {
 														handleChange(event);
 
 														if (+event.target.value !== StoryPrivacy.Public) {
@@ -289,7 +306,7 @@ const Component = withErrorPage<ServerSideProps>(({
 															setFieldValue('anniversary', initialValues.anniversary);
 															setFieldValue('banner', initialValues.banner);
 														}
-													}, [handleChange, setFieldValue])
+													})
 												}
 											>
 												{Object.keys(storyPrivacyNames).map(privacy => (
@@ -309,14 +326,13 @@ const Component = withErrorPage<ServerSideProps>(({
 											/>
 											<BoxRow>
 												<IconImage
-													id="story-icon"
+													id="story-editor-icon"
 													src={values.icon}
 													alt="Your Adventure's Icon"
-													title="Your Adventure's Icon"
 												/>
 											</BoxRow>
 										</BoxRowSection>
-										<BoxRowSection id="story-misc" heading="Misc">
+										<BoxRowSection id="story-editor-misc" heading="Misc">
 											<LabeledBoxRow label="Owner">
 												<UserField
 													name="owner"
@@ -329,7 +345,7 @@ const Component = withErrorPage<ServerSideProps>(({
 															: undefined
 													}
 													onChange={
-														useCallback((event: { target: HTMLInputElement }) => {
+														useFunction((event: { target: HTMLInputElement }) => {
 															if (
 																// The user finished editing the owner.
 																event.target.value
@@ -347,7 +363,7 @@ const Component = withErrorPage<ServerSideProps>(({
 
 																setOwnerBeforeEdit(event.target.value);
 															}
-														}, [ownerBeforeEdit, values.editors, setFieldValue])
+														})
 													}
 												/>
 											</LabeledBoxRow>
@@ -371,7 +387,8 @@ const Component = withErrorPage<ServerSideProps>(({
 											/>
 											<LabeledBoxRow
 												htmlFor={editingAnniversary ? 'field-anniversary-year' : ''}
-												label="Anniversary Date"
+												label="Creation Date"
+												help="This date is displayed publicly in your adventure info and used as the date for your anniversary banner."
 											>
 												{editingAnniversary ? (
 													<DateField
@@ -387,7 +404,7 @@ const Component = withErrorPage<ServerSideProps>(({
 														{ownerPerms && !privateStory.anniversary.changed && (
 															<EditButton
 																className="spaced"
-																title="Edit Anniversary"
+																title="Edit Creation Date"
 																onClick={editAnniversary}
 															/>
 														)}
@@ -399,75 +416,56 @@ const Component = withErrorPage<ServerSideProps>(({
 												name="banner"
 												label="Banner URL"
 												help={'A direct URL to an image of your adventure\'s anniversary banner. The recommended image size is 950x100.\n\nIf your adventure is public, is ongoing or complete, and has at least 200 favorites, this image will be displayed on the homepage for one week starting on the adventure\'s anniversary date.'}
+												placeholder="Optional"
 											/>
-											<BoxRow>
-												<Button href={`/s/${privateStory.id}/edit/p`}>
-													Edit Pages
-												</Button>
-											</BoxRow>
 										</BoxRowSection>
 									</BoxColumns>
-									<BoxSection id="story-details" heading="Details">
+									<BoxSection id="story-editor-details" heading="Details">
 										<Row>
-											<TagField rows={4} />
+											<TagField rows={3} />
 										</Row>
 										<Row>
 											<Label block htmlFor="field-description">
 												Description
 											</Label>
-											<BBField
+											<Field
+												as="textarea"
+												id="field-description"
 												name="description"
-												rows={6}
+												rows={4}
 												maxLength={2000}
-												html
 											/>
 										</Row>
 										<Row>
 											<Label
 												block
-												htmlFor="field-blurb"
-												help={'This text appears when you click "Show More" under an adventure\'s listing, and the first line of it is used in external embeds of this adventure.\n\nThis is useful if you have excessive content in the description that doesn\'t need to be in the blurb.\n\nThis can usually be left empty to default to the adventure\'s description.'}
+												htmlFor="field-sidebar-content"
+												help={'This content is displayed in the sidebar to the left of your adventure info.\n\nUse this for links (typically on images) to your social media, music, credits, or other advertisements. Avoid using the description for this, or else it can show up in the adventure list and create unwanted clutter.\n\nThe recommend image width in the sidebar is 238.'}
 											>
-												Blurb
+												Sidebar (External Links)
 											</Label>
-											<Field
-												as="textarea"
-												id="field-blurb"
-												name="blurb"
+											<BBField
+												name="sidebarContent"
 												rows={4}
 												maxLength={2000}
-												placeholder="This can usually be left empty to default to the adventure's description."
+												html
+												placeholder={'Instead of putting external links in the description, put them here.\nClick the help button for more info.'}
 											/>
 										</Row>
 									</BoxSection>
-									<BoxSection id="story-advanced" heading="Advanced" collapsible>
-										<Row id="code-fields">
+									<BoxSection id="story-editor-advanced" heading="Advanced" collapsible>
+										<Row id="story-editor-code-fields">
 											<div>
-												<Row>
-													<Label block htmlFor="field-style">
-														Custom Style
-													</Label>
-													<Field
-														as="textarea"
-														id="field-style"
-														name="style"
-														rows={8}
-														placeholder={'Paste SCSS here.\nIf you don\'t know what this is, don\'t worry about it.'}
-													/>
-												</Row>
-												<Row>
-													<Label
-														htmlFor="field-disable-user-theme"
-														help="When enabled, disables the user's theme and forces them to use only the standard theme with your custom stylesheet, so if you have heavy custom styling, you don't have to deal with overwriting different themes."
-													>
-														Disable User's Theme
-													</Label>
-													<Field
-														type="checkbox"
-														id="field-disable-user-theme"
-														name="disableUserTheme"
-													/>
-												</Row>
+												<Label block htmlFor="field-style">
+													Custom Style
+												</Label>
+												<Field
+													as="textarea"
+													id="field-style"
+													name="style"
+													rows={8}
+													placeholder={'Paste SCSS here.\nIf you don\'t know what this is, don\'t worry about it.'}
+												/>
 											</div>
 											<div>
 												<Label block htmlFor="field-style">

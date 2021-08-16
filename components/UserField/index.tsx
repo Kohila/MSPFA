@@ -1,22 +1,24 @@
 import './styles.module.scss';
 import { useFormikContext } from 'formik';
-import toKebabCase from 'modules/client/toKebabCase';
+import toKebabCase from 'lib/client/toKebabCase';
 import type { ChangeEvent, InputHTMLAttributes, ReactNode } from 'react';
-import { useCallback, useState, useRef, useEffect } from 'react';
-import { usePrefixedID } from 'modules/client/IDPrefix';
-import api from 'modules/client/api';
-import type { APIClient } from 'modules/client/api';
-import type { PublicUser } from 'modules/client/users';
+import { useState, useRef, useEffect } from 'react';
+import useFunction from 'lib/client/useFunction';
+import { usePrefixedID } from 'lib/client/IDPrefix';
+import api from 'lib/client/api';
+import type { APIClient } from 'lib/client/api';
+import type { PublicUser } from 'lib/client/users';
 import UserFieldOption from 'components/UserField/UserFieldOption';
 import EditButton from 'components/Button/EditButton';
 import axios from 'axios';
-import { useUserCache } from 'modules/client/UserCache';
+import { useUserCache } from 'lib/client/UserCache';
 import RemoveButton from 'components/Button/RemoveButton';
 import { useIsomorphicLayoutEffect, useLatest } from 'react-use';
-import Dialog from 'modules/client/Dialog';
-import useThrottledCallback from 'modules/client/useThrottledCallback';
-import useMountedRef from 'modules/client/useMountedRef';
+import Dialog from 'lib/client/Dialog';
+import useThrottled from 'lib/client/useThrottled';
+import useMountedRef from 'lib/client/useMountedRef';
 import UserLink from 'components/Link/UserLink';
+import type { integer } from 'lib/types';
 
 type UsersAPI = APIClient<typeof import('pages/api/users').default>;
 
@@ -29,7 +31,7 @@ export type UserFieldProps = Pick<InputHTMLAttributes<HTMLInputElement>, 'id' | 
 	/** Whether this field is a child of a `UserArrayField`. */
 	inUserArrayField?: boolean,
 	/** The React keys of the user array field's children which include this component. */
-	userArrayFieldKeys?: number[],
+	userArrayFieldKeys?: integer[],
 	/** Whether the value of this field must be unique from other user fields in the parent `UserArrayField`. */
 	unique?: boolean,
 	/** The value of the parent `UserArrayField`. */
@@ -82,7 +84,7 @@ const UserField = ({
 
 	const cancelTokenSourceRef = useRef<ReturnType<typeof axios.CancelToken.source>>();
 
-	const updateAutoComplete = useThrottledCallback(async (search: string) => {
+	const updateAutoComplete = useThrottled(async (search: string) => {
 		if (search) {
 			cancelTokenSourceRef.current?.cancel();
 			cancelTokenSourceRef.current = axios.CancelToken.source();
@@ -109,13 +111,13 @@ const UserField = ({
 
 	const updateAutoCompleteRef = useLatest(updateAutoComplete);
 
-	const onChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+	const onChange = useFunction((event: ChangeEvent<HTMLInputElement>) => {
 		setInputValue(event.target.value);
 
 		updateAutoCompleteRef.current(event.target.value);
-	}, [updateAutoCompleteRef]);
+	});
 
-	const changeValue = useCallback(async (newValue: string | undefined) => {
+	const changeValue = useFunction(async (newValue: string | undefined) => {
 		setValueState(newValue);
 
 		setFieldValue(name, newValue || '');
@@ -124,9 +126,9 @@ const UserField = ({
 		nativeInput.value = newValue || '';
 
 		onChangeProp?.({ target: nativeInput });
-	}, [name, setFieldValue, onChangeProp]);
+	});
 
-	const startEditing = useCallback(async () => {
+	const startEditing = useFunction(async () => {
 		if (confirmEdit && !await Dialog.confirm({
 			id: 'user-field-edit',
 			title: editTitle,
@@ -146,18 +148,18 @@ const UserField = ({
 		updateAutoCompleteRef.current(newInputValue);
 
 		changeValue(undefined);
-	}, [value, changeValue, inputValue, updateAutoCompleteRef, editTitle, confirmEdit, userCache]);
+	});
 
 	const isEditing = !value;
 	const [wasEditing, setWasEditing] = useState(isEditing);
 
-	const onFocus = useCallback(() => {
+	const onFocus = useFunction(() => {
 		if (isEditing) {
 			setOpenAutoComplete(true);
 		}
-	}, [isEditing]);
+	});
 
-	const onBlur = useCallback(() => {
+	const onBlur = useFunction(() => {
 		if (isEditing) {
 			// This timeout is necessary because otherwise, for example when tabbing through auto-complete options, this will run before the next auto-complete option focuses, so the `if` statement would not detect that any option is in focus.
 			setTimeout(() => {
@@ -175,7 +177,7 @@ const UserField = ({
 				}
 			});
 		}
-	}, [isEditing]);
+	});
 
 	useEffect(() => {
 		if (isEditing === wasEditing) {
@@ -233,7 +235,7 @@ const UserField = ({
 		}
 	}, [isEditing, required, inUserArrayField]);
 
-	const deleteFromArray = useCallback(() => {
+	const deleteFromArray = useFunction(() => {
 		if (required && userArrayFieldValue!.length === 1) {
 			// If the user tries to delete this user from the parent `UserArrayField` while it's `required`, replace it with an empty user field instead.
 			setInputValue('');
@@ -252,7 +254,7 @@ const UserField = ({
 			...arrayFieldValue.slice(0, index),
 			...arrayFieldValue.slice(index + 1, arrayFieldValue.length)
 		]);
-	}, [required, userArrayFieldValue, name, getFieldMeta, userArrayFieldKeys, setFieldValue, changeValue]);
+	});
 
 	return (
 		<div

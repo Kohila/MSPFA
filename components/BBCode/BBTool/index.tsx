@@ -1,21 +1,21 @@
 import './styles.module.scss';
-import { useContext, useCallback, useState } from 'react';
+import { useContext, useState } from 'react';
+import useFunction from 'lib/client/useFunction';
 import { BBFieldContext } from 'components/BBCode/BBField';
 import Button from 'components/Button';
-import Dialog from 'modules/client/Dialog';
+import Dialog from 'lib/client/Dialog';
 import { videoIDTest } from 'components/BBCode/BBTags';
 import InlineRowSection from 'components/Box/InlineRowSection';
 import FieldBoxRow from 'components/Box/FieldBoxRow';
 import Label from 'components/Label';
 import type { FormikProps } from 'formik';
-import { Field } from 'formik';
 import BoxRow from 'components/Box/BoxRow';
 import Link from 'components/Link';
-import { getChangedValues } from 'modules/client/forms';
-import IDPrefix from 'modules/client/IDPrefix';
+import { getChangedValues } from 'lib/client/forms';
+import IDPrefix from 'lib/client/IDPrefix';
 import { useLatest } from 'react-use';
 
-const bbPreview = 'The quick brown fox jumps over the lazy dog.';
+const defaultBBPreview = 'The quick brown fox jumps over the lazy dog.';
 
 const randomColorAttributes = () => ({
 	attributes: `#${`00000${Math.floor(Math.random() * 0x1000000).toString(16)}`.slice(-6)}`
@@ -98,7 +98,6 @@ const tags: Record<string, {
 	},
 	size: {
 		title: 'Font Size',
-		initialValues: { bbPreview },
 		content: ({ values }) => (
 			<InlineRowSection>
 				<FieldBoxRow
@@ -113,12 +112,10 @@ const tags: Record<string, {
 					<Label block htmlFor="field-bb-preview">
 						Preview
 					</Label>
-					{/* This `.bb` container is to give the preview text the correct relative font size. */}
-					<span className="bb">
-						<Field
-							as="textarea"
+					<span id="field-bb-preview-container">
+						<textarea
 							id="field-bb-preview"
-							name="bbPreview"
+							defaultValue={defaultBBPreview}
 							rows={3}
 							style={(
 								typeof values.attributes === 'number'
@@ -133,7 +130,6 @@ const tags: Record<string, {
 	},
 	font: {
 		title: 'Font Family',
-		initialValues: { bbPreview },
 		content: ({ values }) => (
 			<>
 				<InlineRowSection>
@@ -168,13 +164,14 @@ const tags: Record<string, {
 						<Label block htmlFor="field-bb-preview">
 							Preview
 						</Label>
-						<Field
-							as="textarea"
-							id="field-bb-preview"
-							name="bbPreview"
-							rows={3}
-							style={{ fontFamily: values.attributes }}
-						/>
+						<span id="field-bb-preview-container">
+							<textarea
+								id="field-bb-preview"
+								defaultValue={defaultBBPreview}
+								rows={3}
+								style={{ fontFamily: values.attributes }}
+							/>
+						</span>
 					</BoxRow>
 				</InlineRowSection>
 			</>
@@ -338,18 +335,19 @@ const tags: Record<string, {
 				/>
 				{/* YouTube requires embedded players to have a viewport that is at least 200x200. */}
 				{/* Source: https://developers.google.com/youtube/iframe_api_reference#Requirements */}
+				{/* Also, width and height are required fields here since the `iframe` has no good way of determining a good default size for the video. */}
 				<FieldBoxRow
 					type="number"
 					name="width"
 					label="Width"
-					placeholder="Optional"
+					required
 					min={200}
 				/>
 				<FieldBoxRow
 					type="number"
 					name="height"
 					label="Height"
-					placeholder="Optional"
+					required
 					min={200}
 				/>
 				<FieldBoxRow type="checkbox" name="autoplay" label="Autoplay" />
@@ -546,7 +544,7 @@ const BBTool = ({ tag: tagName }: BBToolProps) => {
 			title={tag.title}
 			disabled={disabled}
 			onClick={
-				useCallback(async () => {
+				useFunction(async () => {
 					let children = textAreaRef.current.value.slice(
 						textAreaRef.current.selectionStart,
 						textAreaRef.current.selectionEnd
@@ -660,10 +658,7 @@ const BBTool = ({ tag: tagName }: BBToolProps) => {
 							textAreaRef.current.selectionEnd = textAreaRef.current.selectionStart + tagProps.children.length;
 						}
 					});
-
-					// This ESLint comment is necessary because the rule incorrectly thinks `tagName` should be a dependency here, despite that it depends on `tag` which is already a dependency.
-					// eslint-disable-next-line react-hooks/exhaustive-deps
-				}, [tag, textAreaRef, setValue])
+				})
 			}
 		/>
 	);

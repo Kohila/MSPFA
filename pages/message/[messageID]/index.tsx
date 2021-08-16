@@ -1,44 +1,46 @@
 import './styles.module.scss';
 import Page from 'components/Page';
-import { withErrorPage } from 'modules/client/errors';
-import { withStatusCode } from 'modules/server/errors';
+import { withErrorPage } from 'lib/client/errors';
+import { withStatusCode } from 'lib/server/errors';
 import Box from 'components/Box';
 import BoxSection from 'components/Box/BoxSection';
-import { Perm } from 'modules/client/perms';
-import messages, { getClientMessage, getMessageByUnsafeID, updateUnreadMessages } from 'modules/server/messages';
-import type { ClientMessage } from 'modules/client/messages';
+import { Perm } from 'lib/client/perms';
+import messages, { getClientMessage, getMessageByUnsafeID, updateUnreadMessages } from 'lib/server/messages';
+import type { ClientMessage } from 'lib/client/messages';
 import BBCode from 'components/BBCode';
-import users, { getPublicUser } from 'modules/server/users';
-import type { PublicUser } from 'modules/client/users';
-import { useUser, setUser } from 'modules/client/users';
+import users, { getPublicUser } from 'lib/server/users';
+import type { PublicUser } from 'lib/client/users';
+import { useUser, setUser } from 'lib/client/users';
 import { uniqBy } from 'lodash';
-import { useUserCache } from 'modules/client/UserCache';
+import { useUserCache } from 'lib/client/UserCache';
 import Link from 'components/Link';
-import { Fragment, useCallback, useState } from 'react';
+import { Fragment, useState } from 'react';
+import useFunction from 'lib/client/useFunction';
 import Timestamp from 'components/Timestamp';
 import Button from 'components/Button';
 import BoxFooter from 'components/Box/BoxFooter';
-import type { APIClient } from 'modules/client/api';
-import api from 'modules/client/api';
+import type { APIClient } from 'lib/client/api';
+import api from 'lib/client/api';
 import Router from 'next/router';
-import Dialog from 'modules/client/Dialog';
+import Dialog from 'lib/client/Dialog';
 import Label from 'components/Label';
 import BBField from 'components/BBCode/BBField';
 import { Form, Formik } from 'formik';
-import { useLeaveConfirmation } from 'modules/client/forms';
+import { useLeaveConfirmation } from 'lib/client/forms';
 import UserLink from 'components/Link/UserLink';
 import { useIsomorphicLayoutEffect } from 'react-use';
+import type { integer } from 'lib/types';
 
 type MessageAPI = APIClient<typeof import('pages/api/messages/[messageID]').default>;
 type MessageDeletedByAPI = APIClient<typeof import('pages/api/messages/[messageID]/deletedBy').default>;
 
 type ServerSideProps = {
-	unreadMessageCount?: number,
+	unreadMessageCount?: integer,
 	message: ClientMessage,
 	replyTo?: ClientMessage,
 	userCache: PublicUser[]
 } | {
-	statusCode: number
+	statusCode: integer
 };
 
 const Component = withErrorPage<ServerSideProps>(({
@@ -66,7 +68,7 @@ const Component = withErrorPage<ServerSideProps>(({
 	const { cacheUser } = useUserCache();
 	initialUserCache.forEach(cacheUser);
 
-	const onClickDelete	= useCallback(async () => {
+	const onClickDelete	= useFunction(async () => {
 		if (!await Dialog.confirm({
 			id: 'delete-message',
 			title: 'Delete Message',
@@ -80,18 +82,18 @@ const Component = withErrorPage<ServerSideProps>(({
 		});
 
 		Router.push(`/user/${user.id}/messages`);
-	}, [message.id, user.id]);
+	});
 
-	const edit = useCallback(() => {
+	const edit = useFunction(() => {
 		setEditing(true);
-	}, []);
+	});
 
 	return (
-		<Page flashyTitle heading="Messages">
+		<Page withFlashyTitle heading="Messages">
 			<Formik
 				initialValues={{ content: message.content }}
 				onSubmit={
-					useCallback(async (values: { content: string }) => {
+					useFunction(async (values: { content: string }) => {
 						const { data: newMessage } = await (api as MessageAPI).put(`/messages/${message.id}`, values);
 
 						// Clear the `message` object and assign new properties to it from `newMessage`.
@@ -104,25 +106,28 @@ const Component = withErrorPage<ServerSideProps>(({
 						// It is necessary to mutate the original `message` object instead of using a state because a state would not update when a new `message` prop is passed into the page.
 
 						setEditing(false);
-					}, [message])
+					})
 				}
 				enableReinitialize
 			>
 				{({ dirty, isSubmitting, resetForm }) => {
 					const shouldLeave = useLeaveConfirmation(dirty);
 
-					const cancel = useCallback(() => {
+					const cancel = useFunction(() => {
 						if (shouldLeave()) {
 							// In case the user decides to start editing again, reset the dirty values.
 							resetForm();
 
 							setEditing(false);
 						}
-					}, [resetForm, shouldLeave]);
+					});
 
 					return (
 						<Form>
-							<Box>
+							<Box
+								id="message"
+								className={editing ? 'editing' : undefined}
+							>
 								<BoxSection
 									id="message-info"
 									heading={message.subject}
@@ -245,7 +250,7 @@ export const getServerSideProps = withStatusCode<ServerSideProps>(async ({ req, 
 		return { props: { statusCode: 403 } };
 	}
 
-	let unreadMessageCount: number | undefined;
+	let unreadMessageCount: integer | undefined;
 
 	// If the message is unread, mark it as read.
 	if (message.notReadBy.some(userID => userID.equals(req.user!._id))) {

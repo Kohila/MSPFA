@@ -1,15 +1,18 @@
 import './styles.module.scss';
 import IconImage from 'components/IconImage';
-import type { PublicStory } from 'modules/client/stories';
-import { storyStatusNames, getBlurb } from 'modules/client/stories';
+import type { PublicStory } from 'lib/client/stories';
+import { storyStatusNames } from 'lib/client/stories';
 import Link from 'components/Link';
 import FavButton from 'components/Button/FavButton';
 import EditButton from 'components/Button/EditButton';
-import { useUser } from 'modules/client/users';
-import { Perm } from 'modules/client/perms';
+import { useUser } from 'lib/client/users';
+import { Perm } from 'lib/client/perms';
 import PageCount from 'components/Icon/PageCount';
-import { Fragment, useCallback, useState } from 'react';
+import { Fragment, useState } from 'react';
+import useFunction from 'lib/client/useFunction';
 import BBCode from 'components/BBCode';
+import StoryTagLinkContainer from 'components/StoryTagLink/StoryTagLinkContainer';
+import StoryTagLink from 'components/StoryTagLink';
 
 export type StoryListingProps = {
 	children: PublicStory
@@ -19,11 +22,9 @@ const StoryListing = ({ children: publicStory }: StoryListingProps) => {
 	const user = useUser();
 	const [open, setOpen] = useState(false);
 
-	const toggleOpen = useCallback(() => {
+	const toggleOpen = useFunction(() => {
 		setOpen(open => !open);
-	}, []);
-
-	const blurb = getBlurb(publicStory);
+	});
 
 	return (
 		<div className="listing">
@@ -35,12 +36,12 @@ const StoryListing = ({ children: publicStory }: StoryListingProps) => {
 				<IconImage
 					className="listing-icon"
 					src={publicStory.icon}
-					alt={publicStory.title}
+					alt={`${publicStory.title}'s Icon`}
 				/>
 			</Link>
 			<div className="listing-info">
 				<Link
-					className="listing-title translucent-text"
+					className="listing-title translucent"
 					href={`/?s=${publicStory.id}&p=1`}
 					title={publicStory.title}
 				>
@@ -69,12 +70,12 @@ const StoryListing = ({ children: publicStory }: StoryListingProps) => {
 					</PageCount>
 				</div>
 				{open && (
-					<div className="listing-section listing-blurb">
-						<BBCode>{blurb}</BBCode>
+					<div className="listing-section listing-description">
+						<BBCode>{publicStory.description}</BBCode>
 					</div>
 				)}
-				<div className="listing-section listing-footer">
-					{blurb && (
+				<StoryTagLinkContainer className="listing-section listing-footer">
+					{publicStory.description && (
 						<Link
 							className="listing-more-link"
 							onClick={toggleOpen}
@@ -82,16 +83,14 @@ const StoryListing = ({ children: publicStory }: StoryListingProps) => {
 							{open ? 'Show Less' : 'Show More'}
 						</Link>
 					)}
-					{blurb && !!publicStory.tags.length && ' - '}
+					{publicStory.description && !!publicStory.tags.length && ' - '}
 					{publicStory.tags.map((tag, i) => (
 						<Fragment key={tag}>
 							{i !== 0 && ' '}
-							<Link key={tag} className="tag">
-								{`#${tag}`}
-							</Link>
+							<StoryTagLink>{tag}</StoryTagLink>
 						</Fragment>
 					))}
-				</div>
+				</StoryTagLinkContainer>
 			</div>
 		</div>
 	);

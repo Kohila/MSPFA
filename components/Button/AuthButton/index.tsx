@@ -1,16 +1,16 @@
 import './styles.module.scss';
 import Button from 'components/Button';
-import { useCallback } from 'react';
-import env from 'modules/client/env';
-import Dialog from 'modules/client/Dialog';
+import useFunction from 'lib/client/useFunction';
+import env from 'lib/client/env';
+import Dialog from 'lib/client/Dialog';
 import InlineRowSection from 'components/Box/InlineRowSection';
 import FieldBoxRow from 'components/Box/FieldBoxRow';
-import toKebabCase from 'modules/client/toKebabCase';
+import toKebabCase from 'lib/client/toKebabCase';
 import type { ButtonProps } from 'components/Button';
-import type { AuthMethodOptions } from 'modules/client/auth';
-import { authMethodTypeNames } from 'modules/client/auth';
+import type { AuthMethodOptions } from 'lib/client/auth';
+import { authMethodTypeNames } from 'lib/client/auth';
 import { startLoading, stopLoading } from 'components/LoadingIndicator';
-import loadScript from 'modules/client/loadScript';
+import loadScript from 'lib/client/loadScript';
 import { escapeRegExp } from 'lodash';
 
 /** The global Google API object. */
@@ -160,11 +160,11 @@ const AuthButton = ({ type, onResolve, ...props }: AuthButtonProps) => (
 	<Button
 		className={`auth-button-${toKebabCase(type)}`}
 		onClick={
-			useCallback(async () => {
+			useFunction(async () => {
 				onResolve(await promptAuthMethod[type]());
 
 				await resolveAddAuthMethodDialog();
-			}, [type, onResolve])
+			})
 		}
 		{...props}
 	>

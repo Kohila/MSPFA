@@ -1,14 +1,8 @@
 {
 	"root": true,
-	"env": {
-		"browser": true,
-		"node": true,
-		"es6": true
-	},
 	"extends": [
 		"eslint:recommended",
-		"plugin:react/recommended",
-		"plugin:react-hooks/recommended"
+		"next"
 	],
 	"parser": "@typescript-eslint/parser",
 	"parserOptions": {
@@ -19,19 +13,9 @@
 		},
 		"project": "tsconfig.json"
 	},
-	"settings": {
-		"react": {
-			"version": "detect"
-		}
-	},
 	"plugins": [
-		"@typescript-eslint",
-		"react",
-		"react-hooks"
+		"@typescript-eslint"
 	],
-	"globals": {
-		"React": "writable"
-	},
 	"rules": {
 		"no-async-promise-executor": "off",
 		"no-cond-assign": "off",
@@ -195,6 +179,10 @@
 			{
 				"selector": "ForInStatement",
 				"message": "`for (const key of Object.keys(object))` is faster than `for (key in object)` (though `for (const value of Object.values(object))` is fastest)."
+			},
+			{
+				"selector": "Identifier[name=useCallback]",
+				"message": "Please use `useFunction` instead of `useCallback`."
 			}
 		],
 		"no-trailing-spaces": [
@@ -732,7 +720,8 @@
 						"logical": "parens-new-line",
 						"prop": "parens-new-line"
 					}
-				]
+				],
+				"@next/next/no-img-element": "off"
 			}
 		}
 	]

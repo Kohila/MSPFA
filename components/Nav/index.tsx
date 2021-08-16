@@ -3,16 +3,19 @@ import NavGroup from 'components/Nav/NavGroup';
 import NavItem from 'components/Nav/NavItem';
 import NavMenu from 'components/Nav/NavMenu';
 import Router, { useRouter } from 'next/router';
-import { signIn, signOut, useUser } from 'modules/client/users';
+import { promptSignIn, promptSignOut, useUser } from 'lib/client/users';
 import createGlobalState from 'global-react-state';
-import type { StoryID } from 'modules/server/stories';
-import { useEffect } from 'react';
+import type { StoryID } from 'lib/server/stories';
+import { useIsomorphicLayoutEffect } from 'react-use';
+import useSticky from 'lib/client/useSticky';
+import { useRef } from 'react';
 
 const [useStoryID, setStoryID] = createGlobalState<StoryID | undefined>(undefined);
 
 /** A hook which sets the nav bar's story ID (adding the "LOGS" and "SEARCH" nav items) as long as the component is mounted. */
 export const useNavStoryID = (storyID: StoryID) => {
-	useEffect(() => {
+	// This hook is a layout effect hook rather than a normal effect hook so the nav bar is updated immediately, preventing the user from briefly seeing the outdated nav bar.
+	useIsomorphicLayoutEffect(() => {
 		setStoryID(storyID);
 
 		return () => {
@@ -43,9 +46,13 @@ const Nav = () => {
 		);
 	}
 
+	const ref = useRef<HTMLElement>(null!);
+	useSticky(ref);
+
 	return (
 		<nav
 			className={user?.settings.stickyNav ? 'sticky' : undefined}
+			ref={ref}
 		>
 			<NavGroup id="primary">
 				<NavItem id="home" label="Home" href="/" />
@@ -76,10 +83,10 @@ const Nav = () => {
 							<NavItem id="profile" label="Profile" href={`/user/${user.id}`} />
 							<NavItem id="settings" label="Settings" href={`/user/${user.id}/settings`} />
 							<div className="divider" />
-							<NavItem id="sign-out" label="Sign Out" onClick={signOut} />
+							<NavItem id="sign-out" label="Sign Out" onClick={promptSignOut} />
 						</NavMenu>
 					)
-					: <NavItem id="sign-in" label="Sign In" onClick={signIn} />
+					: <NavItem id="sign-in" label="Sign In" onClick={promptSignIn} />
 				)}
 			</NavGroup>
 			<NavGroup id="secondary">

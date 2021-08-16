@@ -60,6 +60,11 @@ export const sanitizeBBCode = (bbString = '', { html, noBB }: {
 	/** Whether to blacklist all BBCode from the sanitized HTML. */
 	noBB?: boolean
 } = {}) => {
+	// Optimize for the common case of the input being empty.
+	if (bbString === '') {
+		return '';
+	}
+
 	/** The resulting HTML string to be sanitized and parsed. */
 	let htmlString = '';
 
@@ -134,9 +139,15 @@ export const sanitizeBBCode = (bbString = '', { html, noBB }: {
 			FORCE_BODY: true,
 			// Disable DOM clobbering protection on output.
 			SANITIZE_DOM: false,
-			[html ? 'ADD_TAGS' : 'ALLOWED_TAGS']: (
-				noBB ? [] : ['mspfa-bb']
-			)
+			...html ? {
+				ADD_TAGS: ['mspfa-bb', 'iframe'],
+				ADD_ATTR: [
+					// Allow `iframe` attributes.
+					'allow', 'allowfullscreen', 'allowpaymentrequest', 'csp', 'referrerpolicy', 'sandbox', 'srcdoc', 'frameborder', 'marginheight', 'marginwidth', 'scrolling'
+				]
+			} : {
+				ALLOWED_TAGS: noBB ? [] : ['mspfa-bb']
+			}
 		}
 	);
 };
@@ -153,28 +164,25 @@ export type BBCodeProps = {
 };
 
 /** A component which parses its `children` string as BBCode. */
-const BBCode = React.forwardRef<HTMLSpanElement, BBCodeProps>(({
+const BBCode = ({
 	html,
 	noBB,
 	alreadySanitized,
 	children: htmlString = ''
-}, ref) => {
+}: BBCodeProps) => {
 	if (!alreadySanitized) {
 		htmlString = sanitizeBBCode(htmlString, { html, noBB });
 	}
 
 	return (
-		<span
-			className="bb"
-			ref={ref}
-		>
-			{(noBB && !html
-				// If BBCode and HTML are both disabled, then the `htmlString` should be treated as plain text, so it's more optimized to insert the string as a text node rather than parsing it as HTML.
+		<span className="bb">
+			{(htmlString === '' || (noBB && !html)
+				// If `htmlString` is empty or BBCode and HTML are both disabled, then the `htmlString` can be treated as plain text as an optimization.
 				? htmlString
 				: parse(htmlString, parseOptions)
 			)}
 		</span>
 	);
-});
+};
 
 export default BBCode;

@@ -51,10 +51,15 @@ input,
 input:-webkit-autofill::first-line,
 textarea,
 select,
-option {
+option,
+.button {
 	font-family: $monospace;
 	font-weight: bold;
 	@include theme(color, text-color);
+}
+
+img {
+	flex-shrink: 0;
 }
 
 iframe {
@@ -82,17 +87,17 @@ input, textarea, select, option {
 	@include theme(background-color, input-color);
 }
 
-.translucent-text {
+.spaced {
+	& + & {
+		margin-left: 1ch;
+	}
+}
+
+.translucent {
 	opacity: 0.7;
 
 	&.link:not(:focus, :active) {
 		@include theme(color, text-color);
-	}
-}
-
-.spaced {
-	& + & {
-		margin-left: 1ch;
 	}
 }
 

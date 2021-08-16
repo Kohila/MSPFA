@@ -11,27 +11,32 @@ export type ExclusiveLabelProps = {
 	help?: ReactNode
 };
 
-export type LabelProps = HTMLAttributes<HTMLDivElement> & ExclusiveLabelProps;
+export type LabelProps = HTMLAttributes<HTMLDivElement & HTMLSpanElement> & ExclusiveLabelProps;
 
 const Label = ({ block, htmlFor, help, className, children, ...props }: LabelProps) => {
+	const LabelContainerTag = block ? 'div' : 'span';
 	const LabelTag = htmlFor ? 'label' : 'span';
 
 	return (
-		<span
-			className={`label-container${block ? ' block' : ''}${className ? ` ${className}` : ''}`}
+		<LabelContainerTag
+			className={`label-container${className ? ` ${className}` : ''}`}
 			{...props}
 		>
-			<LabelTag className="label spaced" htmlFor={htmlFor}>
+			<LabelTag
+				className="label spaced"
+				htmlFor={htmlFor}
+			>
 				{children}
 			</LabelTag>
 			{help && (
-				<HelpButton className="spaced">
-					{children}:<br />
-					<br />
+				<HelpButton
+					className="spaced"
+					subject={children}
+				>
 					{help}
 				</HelpButton>
 			)}
-		</span>
+		</LabelContainerTag>
 	);
 };
 

@@ -1,9 +1,10 @@
 import './styles.module.scss';
-import { setSignInPage, resolveExternalSignIn } from 'modules/client/signIn';
+import { setSignInPage, resolveExternalSignIn } from 'lib/client/signIn';
 import Link from 'components/Link';
 import createUpdater from 'react-component-updater';
 import type { ChangeEvent } from 'react';
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import useFunction from 'lib/client/useFunction';
 import Captcha from 'components/SignIn/Captcha';
 import LabeledBoxRow from 'components/Box/LabeledBoxRow';
 import InlineRowSection from 'components/Box/InlineRowSection';
@@ -12,11 +13,12 @@ import AuthButton from 'components/Button/AuthButton';
 import BirthdateField from 'components/DateField/BirthdateField';
 import { escapeRegExp } from 'lodash';
 import axios from 'axios';
-import useMountedRef from 'modules/client/useMountedRef';
-import useThrottledCallback from 'modules/client/useThrottledCallback';
-import api from 'modules/client/api';
-import type { APIClient } from 'modules/client/api';
+import useMountedRef from 'lib/client/useMountedRef';
+import useThrottled from 'lib/client/useThrottled';
+import api from 'lib/client/api';
+import type { APIClient } from 'lib/client/api';
 import { useIsomorphicLayoutEffect } from 'react-use';
+import type { integer } from 'lib/types';
 
 type EmailTakenAPI = APIClient<typeof import('pages/api/emailTaken').default>;
 
@@ -64,7 +66,7 @@ const emailTest = /^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-
 
 export type SignInProps = {
 	/** 0 if signing in and not signing up. 1 or more for the page of the sign-up form the user is on. */
-	page: number
+	page: integer
 };
 
 const SignIn = ({ page }: SignInProps) => {
@@ -78,7 +80,7 @@ const SignIn = ({ page }: SignInProps) => {
 	const cancelTokenSourceRef = useRef<ReturnType<typeof axios.CancelToken.source>>();
 
 	/** Asynchronously checks if the `email` is taken and sets the `emailTaken` state accordingly. */
-	const checkEmail = useThrottledCallback(async (email: string) => {
+	const checkEmail = useThrottled(async (email: string) => {
 		cancelTokenSourceRef.current = axios.CancelToken.source();
 
 		const { data: { taken } } = await (api as EmailTakenAPI).get('/emailTaken', {
@@ -94,7 +96,7 @@ const SignIn = ({ page }: SignInProps) => {
 	}, [mountedRef]);
 
 	/** If `page === 1`, queues an update to the `emailTaken` state, possibly via a `checkEmail` call. */
-	const updateEmailTaken = useCallback((email: string) => {
+	const updateEmailTaken = useFunction((email: string) => {
 		// Cancel the last `checkEmail` call, if there is one pending.
 		if (checkEmail.timeoutRef.current) {
 			clearTimeout(checkEmail.timeoutRef.current);
@@ -120,15 +122,15 @@ const SignIn = ({ page }: SignInProps) => {
 		setEmailTaken(undefined);
 
 		checkEmail(email);
-	}, [page, checkEmail]);
+	});
 
-	const onChangeEmail = useCallback((
+	const onChangeEmail = useFunction((
 		event: ChangeEvent<HTMLInputElement & HTMLSelectElement & { name: 'email' }>
 	) => {
 		updateEmailTaken(event.target.value);
 
 		onChange(event);
-	}, [updateEmailTaken]);
+	});
 
 	const emailInputRef = useRef<HTMLInputElement>(null);
 
@@ -153,14 +155,14 @@ const SignIn = ({ page }: SignInProps) => {
 		<div id="sign-in-content">
 			{page !== 2 && (
 				<>
-					<div className="translucent-text">
+					<div className="translucent">
 						{page ? 'Sign up with' : 'Sign in with'}
 					</div>
 					<div id="sign-in-methods-external">
 						<AuthButton type="google" onResolve={resolveExternalSignIn} />
 						<AuthButton type="discord" onResolve={resolveExternalSignIn} />
 					</div>
-					<div id="sign-in-divider" className="translucent-text">or</div>
+					<div id="sign-in-divider" className="translucent">or</div>
 				</>
 			)}
 			<InlineRowSection>
@@ -253,7 +255,7 @@ const SignIn = ({ page }: SignInProps) => {
 							checked={signInValues.termsAgreed}
 							onChange={onChange}
 						/>
-						<label htmlFor="sign-in-terms-agreed" className="translucent-text">
+						<label htmlFor="sign-in-terms-agreed" className="translucent">
 							I agree to the <Link href="/terms" target="_blank">terms of service</Link>.
 						</label>
 					</div>
@@ -261,7 +263,7 @@ const SignIn = ({ page }: SignInProps) => {
 			)}
 			{page === 0 && (
 				<div id="sign-up-link-container">
-					<span className="translucent-text">Don't have an account? </span>
+					<span className="translucent">Don't have an account? </span>
 					<Link onClick={startSigningUp}>Sign Up</Link>
 				</div>
 			)}

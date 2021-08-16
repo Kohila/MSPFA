@@ -1,7 +1,7 @@
 import './styles.module.scss';
 import Link from 'components/Link';
 import type { ReactNode } from 'react';
-import sanitizeURL from 'modules/client/sanitizeURL';
+import sanitizeURL from 'lib/client/sanitizeURL';
 import withBlock from 'components/BBCode/withBlock';
 import Spoiler from 'components/Spoiler';
 import dynamic from 'next/dynamic';
@@ -158,6 +158,7 @@ const BBTags: Partial<Record<string, BBTag>> = {
 						? sanitizeURL(children)
 						: undefined
 				}
+				alt=""
 				width={attributes?.width}
 				height={attributes?.height}
 			/>

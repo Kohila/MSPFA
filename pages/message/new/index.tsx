@@ -1,33 +1,34 @@
 import './styles.module.scss';
 import Page from 'components/Page';
-import type { PublicUser } from 'modules/client/users';
-import { getUser, signIn } from 'modules/client/users';
+import type { PublicUser } from 'lib/client/users';
+import { getUser, promptSignIn } from 'lib/client/users';
 import type { FormikHelpers } from 'formik';
 import { Field, Form, Formik } from 'formik';
-import { useCallback } from 'react';
-import { useLeaveConfirmation } from 'modules/client/forms';
+import useFunction from 'lib/client/useFunction';
+import { useLeaveConfirmation } from 'lib/client/forms';
 import Box from 'components/Box';
 import BoxFooter from 'components/Box/BoxFooter';
 import Button from 'components/Button';
-import type { APIClient } from 'modules/client/api';
-import api from 'modules/client/api';
+import type { APIClient } from 'lib/client/api';
+import api from 'lib/client/api';
 import Label from 'components/Label';
 import BBField from 'components/BBCode/BBField';
 import BoxSection from 'components/Box/BoxSection';
-import Dialog from 'modules/client/Dialog';
-import users, { getPublicUser } from 'modules/server/users';
+import Dialog from 'lib/client/Dialog';
+import users, { getPublicUser } from 'lib/server/users';
 import UserArrayField from 'components/UserField/UserArrayField';
-import { useUserCache } from 'modules/client/UserCache';
+import { useUserCache } from 'lib/client/UserCache';
 import Router from 'next/router';
 import { uniq } from 'lodash';
-import type { ClientMessage } from 'modules/client/messages';
-import { withErrorPage } from 'modules/client/errors';
-import { getClientMessage, getMessageByUnsafeID } from 'modules/server/messages';
-import { Perm } from 'modules/client/perms';
-import { withStatusCode } from 'modules/server/errors';
+import type { ClientMessage } from 'lib/client/messages';
+import { withErrorPage } from 'lib/client/errors';
+import { getClientMessage, getMessageByUnsafeID } from 'lib/server/messages';
+import { Perm } from 'lib/client/perms';
+import { withStatusCode } from 'lib/server/errors';
 import Link from 'components/Link';
-import { safeObjectID } from 'modules/server/db';
+import { safeObjectID } from 'lib/server/db';
 import type { ObjectId } from 'mongodb';
+import type { integer } from 'lib/types';
 
 type MessagesAPI = APIClient<typeof import('pages/api/messages').default>;
 
@@ -50,7 +51,7 @@ type ServerSideProps = {
 	replyTo?: never,
 	toUsers: PublicUser[]
 } | {
-	statusCode: number
+	statusCode: integer
 };
 
 const Component = withErrorPage<ServerSideProps>(({ replyTo, toUsers }) => {
@@ -59,7 +60,7 @@ const Component = withErrorPage<ServerSideProps>(({ replyTo, toUsers }) => {
 	toUsers?.forEach(cacheUser);
 
 	return (
-		<Page flashyTitle heading="Messages">
+		<Page withFlashyTitle heading="Messages">
 			<Formik<Values>
 				initialValues={{
 					content: '',
@@ -73,7 +74,7 @@ const Component = withErrorPage<ServerSideProps>(({ replyTo, toUsers }) => {
 					}
 				} as Values}
 				onSubmit={
-					useCallback(async (
+					useFunction(async (
 						values: Values,
 						{ setSubmitting, resetForm }: FormikHelpers<Values>
 					) => {
@@ -86,7 +87,7 @@ const Component = withErrorPage<ServerSideProps>(({ replyTo, toUsers }) => {
 								content: 'Sign in to send your message!\n\n(Don\'t worry, your message won\'t be lost if you don\'t leave the page.)',
 								actions: ['Sign In', 'Cancel']
 							})) {
-								signIn();
+								promptSignIn();
 							}
 
 							return;
@@ -109,7 +110,7 @@ const Component = withErrorPage<ServerSideProps>(({ replyTo, toUsers }) => {
 
 						// This needs to be `await`ed so `isSubmitting` remains `true` while the router loads, ensuring `useLeaveConfirmation`'s argument is `false`.
 						await Router.push(`/message/${message.id}`);
-					}, [replyTo])
+					})
 				}
 			>
 				{({ isSubmitting, dirty }) => {

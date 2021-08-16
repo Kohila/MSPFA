@@ -1,15 +1,15 @@
 import Page from 'components/Page';
-import { setUser, setUserMerge, defaultSettings, getUser } from 'modules/client/users';
-import type { PrivateUser } from 'modules/client/users';
-import { Perm } from 'modules/client/perms';
-import { permToGetUserInPage } from 'modules/server/perms';
-import { getPrivateUser } from 'modules/server/users';
-import { preventReloads, withErrorPage } from 'modules/client/errors';
-import { withStatusCode } from 'modules/server/errors';
+import { setUser, setUserMerge, defaultSettings, getUser } from 'lib/client/users';
+import type { PrivateUser } from 'lib/client/users';
+import { Perm } from 'lib/client/perms';
+import { permToGetUserInPage } from 'lib/server/perms';
+import { getPrivateUser } from 'lib/server/users';
+import { preventReloads, withErrorPage } from 'lib/client/errors';
+import { withStatusCode } from 'lib/server/errors';
 import { Form, Formik, Field } from 'formik';
-import { useCallback, useEffect, useState } from 'react';
-import type { ChangeEvent } from 'react';
-import { getChangedValues, preventLeaveConfirmations, useLeaveConfirmation } from 'modules/client/forms';
+import { useEffect, useState } from 'react';
+import useFunction from 'lib/client/useFunction';
+import { getChangedValues, preventLeaveConfirmations, useLeaveConfirmation } from 'lib/client/forms';
 import Box from 'components/Box';
 import BoxColumns from 'components/Box/BoxColumns';
 import BoxSection from 'components/Box/BoxSection';
@@ -20,10 +20,10 @@ import NotificationSetting from 'components/Setting/NotificationSetting';
 import ControlSetting from 'components/Setting/ControlSetting';
 import BoxFooter from 'components/Box/BoxFooter';
 import Button from 'components/Button';
-import api from 'modules/client/api';
-import type { APIClient } from 'modules/client/api';
+import api from 'lib/client/api';
+import type { APIClient } from 'lib/client/api';
 import { escapeRegExp, isEqual } from 'lodash';
-import Dialog from 'modules/client/Dialog';
+import Dialog from 'lib/client/Dialog';
 import Label from 'components/Label';
 import Router from 'next/router';
 import BoxRow from 'components/Box/BoxRow';
@@ -35,6 +35,7 @@ import BirthdateField from 'components/DateField/BirthdateField';
 import { useDeepCompareEffect } from 'react-use';
 import Timestamp from 'components/Timestamp';
 import EditButton from 'components/Button/EditButton';
+import type { integer } from 'lib/types';
 
 type UserAPI = APIClient<typeof import('pages/api/users/[userID]').default>;
 type AuthMethodsAPI = APIClient<typeof import('pages/api/users/[userID]/authMethods').default>;
@@ -42,7 +43,6 @@ type PasswordAPI = APIClient<typeof import('pages/api/users/[userID]/authMethods
 type DoesOwnStoriesAPI = APIClient<typeof import('pages/api/users/[userID]/doesOwnStories').default>;
 
 const getSettingsValues = (settings: PrivateUser['settings']) => ({
-	ads: settings.ads,
 	autoOpenSpoilers: settings.autoOpenSpoilers,
 	stickyNav: settings.stickyNav,
 	imageAliasing: settings.imageAliasing,
@@ -76,7 +76,7 @@ const onFormChange = () => {
 type ServerSideProps = {
 	initialPrivateUser: PrivateUser
 } | {
-	statusCode: number
+	statusCode: integer
 };
 
 const Component = withErrorPage<ServerSideProps>(({ initialPrivateUser }) => {
@@ -93,7 +93,7 @@ const Component = withErrorPage<ServerSideProps>(({ initialPrivateUser }) => {
 		setUserMerge(undefined);
 	}, [initialValues]);
 
-	const onClickChangePassword = useCallback(async () => {
+	const onClickChangePassword = useFunction(async () => {
 		const { data: authMethods } = await (api as AuthMethodsAPI).get(`users/${privateUser.id}/authMethods`, {
 			params: {
 				type: 'password'
@@ -165,11 +165,11 @@ const Component = withErrorPage<ServerSideProps>(({ initialPrivateUser }) => {
 				content: 'Success! Your password has been changed.'
 			});
 		}
-	}, [privateUser.id]);
+	});
 
 	// The hooks immediately above and below cannot be inline and must be defined in this scope, because this scope is where `privateUser.id` (the dependency of those callbacks) can be checked for updates at a minimal frequency.
 
-	const onClickEditAuthMethods = useCallback(async () => {
+	const onClickEditAuthMethods = useFunction(async () => {
 		const { data: authMethods } = await (api as AuthMethodsAPI).get(`users/${privateUser.id}/authMethods`);
 
 		new Dialog({
@@ -180,11 +180,11 @@ const Component = withErrorPage<ServerSideProps>(({ initialPrivateUser }) => {
 				{ label: 'Done', autoFocus: false }
 			]
 		});
-	}, [privateUser.id]);
+	});
 
 	const [editingBirthdate, setEditingBirthdate] = useState(false);
 
-	const editBirthdate = useCallback(async () => {
+	const editBirthdate = useFunction(async () => {
 		if (!await Dialog.confirm({
 			id: 'edit-birthdate',
 			title: 'Edit Birthdate',
@@ -194,14 +194,14 @@ const Component = withErrorPage<ServerSideProps>(({ initialPrivateUser }) => {
 		}
 
 		setEditingBirthdate(true);
-	}, []);
+	});
 
 	return (
-		<Page flashyTitle heading="Settings">
+		<Page withFlashyTitle heading="Settings">
 			<Formik
 				initialValues={initialValues}
 				onSubmit={
-					useCallback(async (values: Values) => {
+					useFunction(async (values: Values) => {
 						const changedValues = getChangedValues(initialValues, values);
 
 						if (!changedValues) {
@@ -220,14 +220,11 @@ const Component = withErrorPage<ServerSideProps>(({ initialPrivateUser }) => {
 						if (getUser()!.id === privateUser.id) {
 							setUser(data);
 						}
-
-						// This ESLint comment is necessary because the rule incorrectly thinks `initialValues` should be a dependency here, despite that it depends on `privateUser` which is already a dependency.
-						// eslint-disable-next-line react-hooks/exhaustive-deps
-					}, [privateUser])
+					})
 				}
 				enableReinitialize
 			>
-				{({ isSubmitting, dirty, values, setFieldValue, setSubmitting, handleChange }) => {
+				{({ isSubmitting, dirty, values, setFieldValue, setSubmitting }) => {
 					useLeaveConfirmation(dirty);
 
 					useEffect(() => {
@@ -238,20 +235,6 @@ const Component = withErrorPage<ServerSideProps>(({ initialPrivateUser }) => {
 							setUserMerge({ settings: values.settings });
 						}
 					});
-
-					const interceptAdDisable = useCallback(async (event: ChangeEvent<{ name: string }>) => {
-						if (await Dialog.confirm({
-							id: 'disable-ad',
-							title: 'Disable Ads',
-							content: 'Ads are how we earn money, how we fund the website. By disabling this ad, a fraction of our funds are decreased.\n\nWe\'re okay with that if you don\'t think it\'s worth the unpleasant visual experience, but please first consider the effect of it.',
-							actions: [
-								'I understand the impact of my decision and wish to proceed.',
-								{ label: 'Cancel', autoFocus: true }
-							]
-						})) {
-							setFieldValue(event.target.name, false);
-						}
-					}, [setFieldValue]);
 
 					return (
 						<Form onChange={onFormChange}>
@@ -335,18 +318,6 @@ const Component = withErrorPage<ServerSideProps>(({ initialPrivateUser }) => {
 										label="Image Aliasing"
 										help={'Disables anti-aliasing in images on adventure pages (by using nearest-neighbor scaling).\n\nWhat this means is images, when scaled, will tend to have more crisp edges rather than becoming blurry. It disables the browser\'s smooth scaling effect that causes scaled images to blur.'}
 									/>
-									<FieldBoxRow
-										type="checkbox"
-										name="settings.ads.side"
-										label="Side Ad"
-										onChange={values.settings.ads.side ? interceptAdDisable : handleChange}
-									/>
-									<FieldBoxRow
-										type="checkbox"
-										name="settings.ads.matchedContent"
-										label="Matched Content Ad"
-										onChange={values.settings.ads.matchedContent ? interceptAdDisable : handleChange}
-									/>
 								</BoxRowSection>
 								<BoxColumns>
 									<NotificationSettingGroup heading="General Notifications">
@@ -385,16 +356,13 @@ const Component = withErrorPage<ServerSideProps>(({ initialPrivateUser }) => {
 									</NotificationSettingGroup>
 								</BoxColumns>
 								<BoxRowSection heading="Controls">
-									<BoxRow className="translucent-text">
-										Select a box and press a key. Press escape to remove a control.
-									</BoxRow>
 									<ControlSetting
-										name="settings.controls.back"
-										label="Back"
+										name="settings.controls.previousPage"
+										label="Previous Page"
 									/>
 									<ControlSetting
-										name="settings.controls.forward"
-										label="Forward"
+										name="settings.controls.nextPage"
+										label="Next Page"
 									/>
 									<ControlSetting
 										name="settings.controls.toggleSpoilers"
@@ -423,19 +391,19 @@ const Component = withErrorPage<ServerSideProps>(({ initialPrivateUser }) => {
 											Save
 										</Button>
 										<Button
-											title="Reset settings to default"
+											title="Reset Settings to Default"
 											disabled={isEqual(values.settings, defaultSettingsValues)}
 											onClick={
-												useCallback(async () => {
+												useFunction(async () => {
 													if (await Dialog.confirm({
 														id: 'reset-settings',
 														title: 'Reset Settings',
-														content: 'Are you sure you want to reset your settings to default?\n\nAll changes will be lost.'
+														content: 'Are you sure you want to reset your settings to default?\n\nAll unsaved changes will be lost.'
 													})) {
 														setFieldValue('settings', defaultSettingsValues);
 														onFormChange();
 													}
-												}, [setFieldValue])
+												})
 											}
 										>
 											Reset
@@ -445,7 +413,7 @@ const Component = withErrorPage<ServerSideProps>(({ initialPrivateUser }) => {
 										<Button
 											disabled={isSubmitting}
 											onClick={
-												useCallback(async () => {
+												useFunction(async () => {
 													setSubmitting(true);
 
 													const { data: doesOwnStories } = await (api as DoesOwnStoriesAPI).get(`users/${privateUser.id}/doesOwnStories`).catch(error => {
@@ -512,7 +480,7 @@ const Component = withErrorPage<ServerSideProps>(({ initialPrivateUser }) => {
 
 													preventLeaveConfirmations();
 													Router.push('/');
-												}, [setSubmitting])
+												})
 											}
 										>
 											Delete Account

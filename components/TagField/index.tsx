@@ -1,15 +1,17 @@
 import './styles.module.scss';
 import { useFormikContext } from 'formik';
-import toKebabCase from 'modules/client/toKebabCase';
+import toKebabCase from 'lib/client/toKebabCase';
 import type { TextareaHTMLAttributes, KeyboardEvent, MouseEvent } from 'react';
-import React, { useCallback, useRef, useState } from 'react';
-import { usePrefixedID } from 'modules/client/IDPrefix';
+import React, { useRef, useState } from 'react';
+import useFunction from 'lib/client/useFunction';
+import { usePrefixedID } from 'lib/client/IDPrefix';
 import { useIsomorphicLayoutEffect } from 'react-use';
 import { isEqual, uniq } from 'lodash';
-import type { TagString } from 'modules/server/stories';
+import type { TagString } from 'lib/server/stories';
 import Label from 'components/Label';
-import Dialog from 'modules/client/Dialog';
+import Dialog from 'lib/client/Dialog';
 import Link from 'components/Link';
+import type { integer } from 'lib/types';
 
 /** An object that maps `TagString`s to `string`s explaining each tag. */
 const tagHelp: Partial<Record<TagString, string>> = {
@@ -29,8 +31,10 @@ const tagHelp: Partial<Record<TagString, string>> = {
 const heightTextArea = document.createElement('textarea'); // @client-only
 
 /** Characters that should be replaced from the tag field before delimiters are processed. */
-const invalidCharacters = /[^a-z0-9-,]/g;
-const tagDelimiters = /[,\s\n]/g;
+const invalidCharacters = /[^a-z0-9-,#\s\n]/g;
+/** Matches a character which would not be matched by `invalidCharacters`. */
+const validCharacter = /^[a-z0-9-,#\s\n]$/i;
+const tagDelimiters = /[,#\s\n]/g;
 const startAndEndHyphens = /^-+|-+$/g;
 
 /** A child node of a tag field element. */
@@ -57,7 +61,7 @@ const createTagFieldEditable = () => {
 
 export type TagFieldProps = Pick<TextareaHTMLAttributes<HTMLTextAreaElement>, 'name' | 'id' | 'rows'> & {
 	/** The maximum number of tags allowed. Defaults to 50. */
-	max?: number
+	max?: integer
 };
 
 const TagField = ({
@@ -125,7 +129,7 @@ const TagField = ({
 		return tag;
 	};
 
-	const updateTagField = useCallback(() => {
+	const updateTagField = useFunction(() => {
 		const allTagValues: TagString[] = [];
 
 		for (let i = 0; i < inputRef.current.childNodes.length; i++) {
@@ -264,7 +268,7 @@ const TagField = ({
 		if (!isEqual(fieldValue, allTagValues)) {
 			setFieldValue(name, allTagValues);
 		}
-	}, [name, fieldValue, setFieldValue, max]);
+	});
 
 	useIsomorphicLayoutEffect(() => {
 		// Determine the element's height based on the `rows` prop.
@@ -312,7 +316,7 @@ const TagField = ({
 				spellCheck={false}
 				onInput={updateTagField}
 				onKeyDown={
-					useCallback((event: KeyboardEvent<HTMLDivElement>) => {
+					useFunction((event: KeyboardEvent<HTMLDivElement>) => {
 						// Don't let the user press `Enter`, because `Enter` has annoying functionality with `contentEditable`, and it is buggy in Firefox.
 						if (event.code === 'Enter' || (
 							event.key.length === 1 && !(
@@ -320,23 +324,23 @@ const TagField = ({
 								|| event.metaKey
 								|| event.altKey
 								// Only let the user enter valid characters for tags.
-								|| /^[a-z0-9-,]$/i.test(event.key)
+								|| validCharacter.test(event.key)
 							)
 						)) {
 							event.preventDefault();
 						}
 
 						setTimeout(updateTagField);
-					}, [updateTagField])
+					})
 				}
 				onClick={
-					useCallback((event: MouseEvent<HTMLDivElement> & { target: HTMLElement }) => {
+					useFunction((event: MouseEvent<HTMLDivElement> & { target: HTMLElement }) => {
 						if (event.target.classList.contains('tag-field-tag-remove')) {
 							inputRef.current.removeChild(event.target.parentNode!);
 
 							updateTagField();
 						}
-					}, [updateTagField])
+					})
 				}
 				ref={inputRef}
 			/>
@@ -345,7 +349,7 @@ const TagField = ({
 				<div
 					className="tag-field-presets input-like"
 					onClick={
-						useCallback((
+						useFunction((
 							event: MouseEvent<HTMLDivElement> & {
 								target: HTMLElement & { parentNode: HTMLElement }
 							}
@@ -371,14 +375,14 @@ const TagField = ({
 							if (event.target.classList.contains('tag-field-tag-help')) {
 								new Dialog({
 									id: 'help',
-									title: 'Help',
-									content: `Tag: ${tagValue}\n\n${tagHelp[tagValue]}`
+									title: `Help: #${tagValue}`,
+									content: `Use this tag if:\n\n${tagHelp[tagValue]}`
 								});
 							} else if (!fieldValue.includes(tagValue)) {
 								createAndInsertTag(tagValue, inputRef.current.lastChild!);
 								setFieldValue(name, [...fieldValue, tagValue]);
 							}
-						}, [name, fieldValue, setFieldValue])
+						})
 					}
 				>
 					{Object.keys(tagHelp).map(tagValue => (

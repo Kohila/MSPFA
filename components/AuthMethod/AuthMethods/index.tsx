@@ -1,13 +1,14 @@
 import './styles.module.scss';
 import Button from 'components/Button';
-import type { PrivateUser } from 'modules/client/users';
-import { useCallback, useState } from 'react';
+import type { PrivateUser } from 'lib/client/users';
+import { useState } from 'react';
+import useFunction from 'lib/client/useFunction';
 import AuthMethod from 'components/AuthMethod';
-import Dialog from 'modules/client/Dialog';
+import Dialog from 'lib/client/Dialog';
 import AuthButton from 'components/Button/AuthButton';
-import api from 'modules/client/api';
-import type { APIClient } from 'modules/client/api';
-import type { AuthMethodOptions, ClientAuthMethod } from 'modules/client/auth';
+import api from 'lib/client/api';
+import type { APIClient } from 'lib/client/api';
+import type { AuthMethodOptions, ClientAuthMethod } from 'lib/client/auth';
 
 type AuthMethodsAPI = APIClient<typeof import('pages/api/users/[userID]/authMethods').default>;
 
@@ -22,13 +23,13 @@ const AuthMethods = ({
 }: AuthMethodsProps) => {
 	const [authMethods, setAuthMethods] = useState(initialAuthMethods);
 
-	const onResolve = useCallback(async (authMethodOptions: AuthMethodOptions) => {
+	const onResolve = useFunction(async (authMethodOptions: AuthMethodOptions) => {
 		const { data: authMethod } = await (api as AuthMethodsAPI).post(`users/${userID}/authMethods`, authMethodOptions);
 
 		if (Dialog.getByID('auth-methods')) {
 			setAuthMethods([...authMethods, authMethod]);
 		}
-	}, [userID, authMethods]);
+	});
 
 	return (
 		<div id="auth-methods">
@@ -46,7 +47,7 @@ const AuthMethods = ({
 					className="small"
 					autoFocus
 					onClick={
-						useCallback(() => {
+						useFunction(() => {
 							new Dialog({
 								id: 'add-auth-method',
 								title: 'Add Sign-In Method',
@@ -63,7 +64,7 @@ const AuthMethods = ({
 									{ label: 'Cancel', autoFocus: false }
 								]
 							});
-						}, [onResolve, authMethods])
+						})
 					}
 				>
 					Add Sign-In Method

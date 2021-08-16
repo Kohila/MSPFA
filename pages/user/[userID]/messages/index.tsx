@@ -1,28 +1,31 @@
 import './styles.module.scss';
 import Page from 'components/Page';
-import { withErrorPage } from 'modules/client/errors';
-import { withStatusCode } from 'modules/server/errors';
+import { withErrorPage } from 'lib/client/errors';
+import { withStatusCode } from 'lib/server/errors';
 import Box from 'components/Box';
 import BoxSection from 'components/Box/BoxSection';
-import { Perm } from 'modules/client/perms';
-import { permToGetUserInPage } from 'modules/server/perms';
-import messages, { getClientMessage } from 'modules/server/messages';
-import type { ClientMessage } from 'modules/client/messages';
-import type { PublicUser, PrivateUser } from 'modules/client/users';
-import { getUser, setUser } from 'modules/client/users';
-import { useUserCache } from 'modules/client/UserCache';
+import { Perm } from 'lib/client/perms';
+import { permToGetUserInPage } from 'lib/server/perms';
+import messages, { getClientMessage } from 'lib/server/messages';
+import type { ClientMessage } from 'lib/client/messages';
+import type { PublicUser, PrivateUser } from 'lib/client/users';
+import { getUser, setUser } from 'lib/client/users';
+import { useUserCache } from 'lib/client/UserCache';
 import List from 'components/List';
 import { uniqBy } from 'lodash';
-import users, { getPrivateUser, getPublicUser } from 'modules/server/users';
+import users, { getPrivateUser, getPublicUser } from 'lib/server/users';
 import type { ListedMessage } from 'components/MessageListing';
 import MessageListing from 'components/MessageListing';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import useFunction from 'lib/client/useFunction';
 import Button from 'components/Button';
 import { useLatest } from 'react-use';
-import Dialog from 'modules/client/Dialog';
+import Dialog from 'lib/client/Dialog';
 import fs from 'fs-extra';
 import path from 'path';
 import Row from 'components/Row';
+import type { integer } from 'lib/types';
+import useSticky from 'lib/client/useSticky';
 
 type ServerSideProps = {
 	privateUser: PrivateUser,
@@ -30,7 +33,7 @@ type ServerSideProps = {
 	userCache: PublicUser[],
 	imageFilename: string
 } | {
-	statusCode: number
+	statusCode: integer
 };
 
 const Component = withErrorPage<ServerSideProps>(({
@@ -48,6 +51,10 @@ const Component = withErrorPage<ServerSideProps>(({
 
 	const { cacheUser } = useUserCache();
 	initialUserCache.forEach(cacheUser);
+
+	/** A ref to the `#messages-actions` element. */
+	const actionsElementRef = useRef<HTMLDivElement>(null!);
+	useSticky(actionsElementRef);
 
 	let selectedCount = 0;
 	let unreadCount = 0;
@@ -74,37 +81,37 @@ const Component = withErrorPage<ServerSideProps>(({
 		}
 	}, [unreadCount, privateUser.id]);
 
-	const deselectAll = useCallback(() => {
+	const deselectAll = useFunction(() => {
 		setListedMessages(listedMessages.map(message => ({
 			...message,
 			selected: false
 		})));
-	}, [listedMessages]);
+	});
 
-	const selectAll = useCallback(() => {
+	const selectAll = useFunction(() => {
 		setListedMessages(listedMessages.map(message => ({
 			...message,
 			selected: true
 		})));
-	}, [listedMessages]);
+	});
 
-	const markRead = useCallback(() => {
+	const markRead = useFunction(() => {
 		for (const message of listedMessages) {
 			if (message.selected) {
 				message.ref!.current.markRead(true);
 			}
 		}
-	}, [listedMessages]);
+	});
 
-	const markUnread = useCallback(() => {
+	const markUnread = useFunction(() => {
 		for (const message of listedMessages) {
 			if (message.selected) {
 				message.ref!.current.markRead(false);
 			}
 		}
-	}, [listedMessages]);
+	});
 
-	const deleteMessages = useCallback(async () => {
+	const deleteMessages = useFunction(async () => {
 		if (!await Dialog.confirm({
 			id: 'delete-messages',
 			title: 'Delete Messages',
@@ -118,11 +125,11 @@ const Component = withErrorPage<ServerSideProps>(({
 				message.ref!.current.deleteMessage();
 			}
 		}
-	}, [listedMessages, selectedCount]);
+	});
 
 	// It is necessary that `setMessage` and `removeListing` are refs to fix race conditions due to running them on multiple selected messages simultaneously.
 	const setMessageRef = useLatest(
-		useCallback((message: ListedMessage) => {
+		useFunction((message: ListedMessage) => {
 			const messageIndex = listedMessages.findIndex(({ id }) => id === message.id);
 
 			setListedMessages([
@@ -130,27 +137,30 @@ const Component = withErrorPage<ServerSideProps>(({
 				message,
 				...listedMessages.slice(messageIndex + 1, listedMessages.length)
 			]);
-		}, [listedMessages])
+		})
 	);
 
 	const removeListingRef = useLatest(
-		useCallback((message: ListedMessage) => {
+		useFunction((message: ListedMessage) => {
 			const messageIndex = listedMessages.findIndex(({ id }) => id === message.id);
 
 			setListedMessages([
 				...listedMessages.slice(0, messageIndex),
 				...listedMessages.slice(messageIndex + 1, listedMessages.length)
 			]);
-		}, [listedMessages])
+		})
 	);
 
 	return (
-		<Page flashyTitle heading="Messages">
+		<Page withFlashyTitle heading="Messages">
 			<Box>
 				<BoxSection
 					heading={`Your Messages (${listedMessages.length} total, ${unreadCount} unread)`}
 				>
-					<div id="messages-actions">
+					<div
+						id="messages-actions"
+						ref={actionsElementRef}
+					>
 						<Button
 							className="small"
 							href="/message/new"

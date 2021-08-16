@@ -14,17 +14,17 @@ export type PageProps = {
 	 * When set, padding is added to the `main` element via `className="padded"`.
 	 */
 	heading?: ReactNode,
-	children: ReactNode
+	children: ReactNode,
+	/** A `ReactNode` between the `footer` and the `#copyright` elements. */
+	basement?: ReactNode
 } & HeaderProps;
 
-const Page = ({ heading, children, flashyTitle }: PageProps) => (
+const Page = ({ heading, children, withFlashyTitle, basement }: PageProps) => (
 	<>
-		{/* This only exists to preload the Homestuck-Regular font so that, later, a fallback font doesn't flicker for a moment while Homestuck-Regular lazy-loads. */}
-		<span id="preload-font" />
 		{/* It is necessary for dialogs to be before the page so that dialog elements are reached first when tabbing. */}
 		<Dialogs />
 		<div id="page">
-			<Header flashyTitle={flashyTitle} />
+			<Header withFlashyTitle={withFlashyTitle} />
 			<main className={`mid${heading ? ' padded' : ''}`}>
 				{(heading
 					? <PageHeading>{heading}</PageHeading>
@@ -33,8 +33,14 @@ const Page = ({ heading, children, flashyTitle }: PageProps) => (
 				{children}
 			</main>
 			<Footer />
+			{basement}
+			<div id="copyright">
+				{`MS Paint Fan Adventures © 2010-${new Date().getFullYear()}`}
+			</div>
 		</div>
 		<LoadingIndicator />
+		{/* This exists to preload certain resources via styles set on it. */}
+		<div id="preload-resources" />
 	</>
 );
 

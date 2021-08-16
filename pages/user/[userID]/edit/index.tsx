@@ -1,23 +1,23 @@
-import './styles.module.scss';
 import Page from 'components/Page';
-import { getUser, setUser } from 'modules/client/users';
-import type { PrivateUser } from 'modules/client/users';
-import { Perm } from 'modules/client/perms';
-import { permToGetUserInPage } from 'modules/server/perms';
-import { getPrivateUser } from 'modules/server/users';
-import { withErrorPage } from 'modules/client/errors';
-import { withStatusCode } from 'modules/server/errors';
+import { getUser, setUser } from 'lib/client/users';
+import type { PrivateUser } from 'lib/client/users';
+import { Perm } from 'lib/client/perms';
+import { permToGetUserInPage } from 'lib/server/perms';
+import { getPrivateUser } from 'lib/server/users';
+import { withErrorPage } from 'lib/client/errors';
+import { withStatusCode } from 'lib/server/errors';
 import { Field, Form, Formik } from 'formik';
-import { useCallback, useState } from 'react';
-import { getChangedValues, useLeaveConfirmation } from 'modules/client/forms';
+import { useState } from 'react';
+import useFunction from 'lib/client/useFunction';
+import { getChangedValues, useLeaveConfirmation } from 'lib/client/forms';
 import Box from 'components/Box';
 import BoxColumns from 'components/Box/BoxColumns';
 import BoxSection from 'components/Box/BoxSection';
 import BoxRowSection from 'components/Box/BoxRowSection';
 import BoxFooter from 'components/Box/BoxFooter';
 import Button from 'components/Button';
-import api from 'modules/client/api';
-import type { APIClient } from 'modules/client/api';
+import api from 'lib/client/api';
+import type { APIClient } from 'lib/client/api';
 import FieldBoxRow from 'components/Box/FieldBoxRow';
 import IconImage from 'components/IconImage';
 import Label from 'components/Label';
@@ -25,6 +25,7 @@ import LabeledBoxRow from 'components/Box/LabeledBoxRow';
 import BoxRow from 'components/Box/BoxRow';
 import BirthdateField from 'components/DateField/BirthdateField';
 import BBField from 'components/BBCode/BBField';
+import type { integer } from 'lib/types';
 
 type UserAPI = APIClient<typeof import('pages/api/users/[userID]').default>;
 
@@ -48,7 +49,7 @@ type Values = ReturnType<typeof getValuesFromUser>;
 type ServerSideProps = {
 	privateUser: PrivateUser
 } | {
-	statusCode: number
+	statusCode: integer
 };
 
 const Component = withErrorPage<ServerSideProps>(({ privateUser: initialPrivateUser }) => {
@@ -57,11 +58,11 @@ const Component = withErrorPage<ServerSideProps>(({ privateUser: initialPrivateU
 	const initialValues = getValuesFromUser(privateUser);
 
 	return (
-		<Page flashyTitle heading="Edit Profile">
+		<Page withFlashyTitle heading="Edit Profile">
 			<Formik
 				initialValues={initialValues}
 				onSubmit={
-					useCallback(async (values: Values) => {
+					useFunction(async (values: Values) => {
 						const changedValues = getChangedValues(initialValues, values);
 
 						if (!changedValues) {
@@ -77,10 +78,7 @@ const Component = withErrorPage<ServerSideProps>(({ privateUser: initialPrivateU
 						if (getUser()!.id === privateUser.id) {
 							setUser(data);
 						}
-
-						// This ESLint comment is necessary because the rule incorrectly thinks `initialValues` should be a dependency here, despite that it depends on `privateUser` which is already a dependency.
-						// eslint-disable-next-line react-hooks/exhaustive-deps
-					}, [privateUser])
+					})
 				}
 				enableReinitialize
 			>
@@ -115,7 +113,6 @@ const Component = withErrorPage<ServerSideProps>(({ privateUser: initialPrivateU
 												id="profile-icon"
 												src={values.icon}
 												alt="Your Profile Icon"
-												title="Your Profile Icon"
 											/>
 										</BoxRow>
 									</BoxRowSection>

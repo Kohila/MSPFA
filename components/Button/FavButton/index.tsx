@@ -1,19 +1,21 @@
 import './styles.module.scss';
 import Button from 'components/Button';
 import type { ButtonProps } from 'components/Button';
-import { useCallback, useState } from 'react';
-import { setUser, signIn, useUser } from 'modules/client/users';
-import api from 'modules/client/api';
-import type { APIClient, APIError } from 'modules/client/api';
-import Dialog from 'modules/client/Dialog';
-import type { StoryID } from 'modules/server/stories';
+import { useState } from 'react';
+import useFunction from 'lib/client/useFunction';
+import { setUser, promptSignIn, useUser } from 'lib/client/users';
+import api from 'lib/client/api';
+import type { APIClient, APIError } from 'lib/client/api';
+import Dialog from 'lib/client/Dialog';
+import type { StoryID } from 'lib/server/stories';
+import type { integer } from 'lib/types';
 
 type FavsAPI = APIClient<typeof import('pages/api/users/[userID]/favs').default>;
 type FavAPI = APIClient<typeof import('pages/api/users/[userID]/favs/[storyID]').default>;
 
 export type FavButtonProps = Omit<ButtonProps, 'onClick' | 'title' | 'children'> & {
 	storyID: StoryID,
-	children: number
+	children: integer
 };
 
 const FavButton = ({ storyID, className, children, ...props }: FavButtonProps) => {
@@ -32,7 +34,7 @@ const FavButton = ({ storyID, className, children, ...props }: FavButtonProps) =
 			className={`fav-button${active ? ' active' : ''}${className ? ` ${className}` : ''}`}
 			title={`${favCount} Favorite${favCount === 1 ? '' : 's'}`}
 			onClick={
-				useCallback(async () => {
+				useFunction(async () => {
 					if (loading) {
 						return;
 					}
@@ -46,7 +48,7 @@ const FavButton = ({ storyID, className, children, ...props }: FavButtonProps) =
 							content: 'Sign in to save your favorites!',
 							actions: ['Sign In', 'Cancel']
 						})) {
-							signIn();
+							promptSignIn();
 						}
 
 						return;
@@ -54,7 +56,7 @@ const FavButton = ({ storyID, className, children, ...props }: FavButtonProps) =
 
 					setLoading(true);
 
-					let newFavCount: number;
+					let newFavCount: integer;
 
 					if (active) {
 						({ data: { favCount: newFavCount } } = await (api as FavAPI).delete(`/users/${user.id}/favs/${storyID}`, {
@@ -98,10 +100,7 @@ const FavButton = ({ storyID, className, children, ...props }: FavButtonProps) =
 
 					setFavCount(newFavCount);
 					setLoading(false);
-
-					// This ESLint comment is necessary because the rule incorrectly thinks `active` and `favIndex` should be dependencies here, despite that they depend on `user` which is already a dependency.
-					// eslint-disable-next-line react-hooks/exhaustive-deps
-				}, [user, storyID, loading])
+				})
 			}
 			{...props}
 		>
