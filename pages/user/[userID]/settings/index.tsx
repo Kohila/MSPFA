@@ -2,7 +2,7 @@ import Page from 'components/Page';
 import { setUser, setUserMerge, defaultSettings, getUser } from 'lib/client/users';
 import type { PrivateUser } from 'lib/client/users';
 import { Perm } from 'lib/client/perms';
-import { permToGetUserInPage } from 'lib/server/perms';
+import { permToGetUserInPage } from 'lib/server/permToGetUser';
 import { getPrivateUser } from 'lib/server/users';
 import { preventReloads, withErrorPage } from 'lib/client/errors';
 import { withStatusCode } from 'lib/server/errors';
@@ -296,8 +296,7 @@ const Component = withErrorPage<ServerSideProps>(({ initialPrivateUser }) => {
 										<option value="standard">Standard</option>
 										<option value="dark">Dark</option>
 										<option value="felt">Felt</option>
-										<option value="sbahj">SBaHJ</option>
-										<option value="trickster">Trickster</option>
+										<option value="sah">Sweet and Hella</option>
 									</FieldBoxRow>
 									<FieldBoxRow
 										type="checkbox"

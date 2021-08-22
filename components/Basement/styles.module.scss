@@ -1,5 +1,5 @@
 @use 'sass:map';
-@use 'styles/general' as *;
+@use 'sass:math';
 @use 'styles/themes' as *;
 
 #basement {
@@ -78,8 +78,9 @@
 
 	&-heading {
 		text-align: center;
+		@include theme(font, heading-font);
+		font-weight: bold;
 		font-size: 2em;
-		font-family: Homestuck-Regular;
 		text-transform: uppercase;
 	}
 }
@@ -90,11 +91,7 @@
 	&-content {
 		text-align: center;
 		font-size: 0.875em;
-		margin: 2em 0 0.75em 0;
-
-		* {
-			max-width: 100%;
-		}
+		margin: 2em 0 0.75em;
 	}
 }
 
@@ -130,7 +127,7 @@
 
 #view-all-pages-link-container {
 	text-align: center;
-	font-family: $sans-serif;
+	@include theme(font, alt-font);
 	text-transform: uppercase;
 	margin-bottom: 1em;
 }
@@ -146,7 +143,8 @@
 	}
 
 	&-title {
-		font-family: Homestuck-Regular;
+		@include theme(font, heading-font);
+		font-weight: bold;
 		font-size: 2em;
 		line-height: 1;
 	}
@@ -154,8 +152,23 @@
 	&-description {
 		font-size: 0.875em;
 	}
+
+	&-news {
+		&-actions {
+			text-align: center;
+		}
+
+		padding: 2px 14px 14px 0;
+		font-size: 0.875em;
+	}
 }
 
 .story-details-section:not(:last-child) {
 	margin-bottom: 0.5ch;
+}
+
+#edit-news-tip {
+	font-size: 0.875em;
+	opacity: 0.5;
+	max-width: fit-content;
 }

@@ -7,9 +7,10 @@ import type { ServerUser, ServerUserID } from 'lib/server/users';
 import users from 'lib/server/users';
 import type { APIResponse } from 'lib/server/api';
 import type { UpdateFilter } from 'mongodb';
-import type { Comment } from 'lib/server/comments';
+import type { ServerComment } from 'lib/server/comments';
 import type { ClientPreviousPageIDs } from 'components/StoryViewer';
 import { PAGE_PRELOAD_DEPTH } from 'components/StoryViewer';
+import type { ServerNews } from 'lib/server/news';
 
 /** @minimum 1 */
 export type StoryID = integer;
@@ -39,7 +40,7 @@ export type ServerStoryPage = {
 	/** Whether the client's controls should be disabled while this page is rendered. */
 	disableControls: boolean,
 	commentary: string,
-	comments: Comment[],
+	comments: ServerComment[],
 	/** Whether this page was set to notify readers on publish. */
 	notify: boolean
 };
@@ -124,6 +125,8 @@ export type ServerStory = {
 	allowComments: boolean,
 	/** @maxLength 2000 */
 	sidebarContent: string,
+	/** This story's news posts sorted from newest to oldest. */
+	news: ServerNews[],
 	defaultPageTitle: ServerStoryPage['title'],
 	spoilerPresets: SpoilerPreset[],
 	colors: StoryColor[],
@@ -149,6 +152,7 @@ export const defaultStory = {
 	tags: [] as never[],
 	allowComments: true,
 	sidebarContent: '',
+	news: [] as never[],
 	defaultPageTitle: 'Next.',
 	spoilerPresets: [] as never[],
 	colors: [] as never[],

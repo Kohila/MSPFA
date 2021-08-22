@@ -1,6 +1,8 @@
 @use 'sass:math';
-@use 'styles/general' as *;
+@use 'styles/themes' as *;
 
+// This is to mimic the apparent horizontal padding of the page container on http://web.archive.org/web/20141103155157/http://www.mspaintadventures.com/index_hscroll.php?s=6&p=008848.
+$story-page-container-horizontal-padding: math.div(1200px - 1107px, 2);
 $story-page-min-width: 650px;
 $story-page-padding: 25px;
 
@@ -8,16 +10,23 @@ $story-page-padding: 25px;
 	&-container {
 		display: flex;
 		justify-content: center;
-		padding: 7px 0 23px 0;
+		padding: 7px $story-page-container-horizontal-padding 23px;
 	}
 
-	// `display: table;` conveniently allows the element's width to dynamically increase to fit its contents exactly the way we want it to.
+	// For browsers that don't support `width: min-content`.
+	// `display: table` conveniently allows the element's width to dynamically adjust on older browsers in the same way `width: min-content` works on newer browsers.
 	display: table;
 	box-sizing: border-box;
 	padding: 0 $story-page-padding;
-	width: $story-page-min-width;
-	// `min-width` is necessary and must equal `width` because it is used by an effect hook to calculate this element's content width.
 	min-width: $story-page-min-width;
+	// For browsers that don't support `min-content`.
+	width: $story-page-min-width;
+	width: min-content;
+
+	@supports (width: min-content) {
+		// We use `display: block` instead of `display: table` because it is no longer necessary when the browser supports `width: min-content`, which not only dynamically adjusts the element's width as `display: table` would, but also makes it easier for custom styles to change various properties while minimizing the need for repetition.
+		display: block;
+	}
 
 	@include mobile {
 		width: 100%;
@@ -28,6 +37,8 @@ $story-page-padding: 25px;
 		text-align: center;
 		padding: 14px 5px;
 		font-size: xx-large;
+		// Do not assume the theme's default `font-weight` is `bold`.
+		font-weight: bold;
 	}
 
 	&-content {
@@ -35,11 +46,16 @@ $story-page-padding: 25px;
 		padding-bottom: 14px;
 		font-size: 0.875em;
 		line-height: 1;
+
+		* {
+			// This is necessary so an effect hook can detect the original width of elements which should be classed with the `panel` class.
+			max-width: none;
+		}
 	}
 
 	&-links, &-footer {
 		padding: 17px 0;
-		font-family: $sans-serif;
+		@include theme(font, alt-font);
 		font-weight: normal;
 	}
 
@@ -78,10 +94,14 @@ $story-page-padding: 25px;
 
 .panel {
 	margin: 0 (-$story-page-padding);
-	max-width: $page-width;
+	// For browsers that don't support `stretch`.
+	max-width: $page-width - 2 * $story-page-container-horizontal-padding;
+	max-width: stretch;
 
 	@include mobile {
-		max-width: 100%; // For browsers that don't support `vw`.
+		// For browsers that don't support `vw` which might have a viewport width smaller than `$page-width`.
+		max-width: 100%;
+		// We use `vw` instead of `%` because we want to ignore the padding of the container.
 		max-width: 100vw;
 	}
 }

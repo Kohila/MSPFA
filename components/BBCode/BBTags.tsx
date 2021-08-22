@@ -11,7 +11,7 @@ const Flash = dynamic(() => import('components/Flash'), {
 });
 
 export const hashlessColorCodeTest = /^([0-9a-f]{3}(?:[0-9a-f]{3}(?:[0-9a-f]{2})?)?)$/i;
-export const videoIDTest = /^(?:(?:https?:\/\/)?(?:www\.)?(?:youtu\.be|youtube\.com)\/(?:.+\/)?(?:(?:.*[?&])v=)?)?([\w-]+)(?:&.+)?$/i;
+export const youTubeVideoIDTest = /^(?:https?:)?\/\/(?:(?:www|m)\.)?(?:youtube\.com|youtu\.be)\/.*(?:v=|\/)([\w-]+).*$/i;
 
 /** Gets `width` and `height` attributes from a string that looks like `${width}x${height}`. */
 const getWidthAndHeight = (attributes: string) => {
@@ -50,7 +50,6 @@ export type BBTag = (
 );
 
 const BBTags: Partial<Record<string, BBTag>> = {
-	html: ({ children }) => <span className="html">{children}</span>,
 	b: ({ children }) => <b>{children}</b>,
 	i: ({ children }) => <i>{children}</i>,
 	u: ({ children }) => <u>{children}</u>,
@@ -126,8 +125,9 @@ const BBTags: Partial<Record<string, BBTag>> = {
 	),
 	spoiler: withBlock(({ attributes, children }) => (
 		<Spoiler
-			open={attributes instanceof Object ? attributes.open : undefined}
-			close={attributes instanceof Object ? attributes.close : undefined}
+			name={typeof attributes === 'string' ? attributes : undefined}
+			show={attributes instanceof Object ? attributes.show : undefined}
+			hide={attributes instanceof Object ? attributes.hide : undefined}
 		>
 			{children}
 		</Spoiler>
@@ -164,7 +164,7 @@ const BBTags: Partial<Record<string, BBTag>> = {
 			/>
 		);
 	},
-	youtube: ({ attributes, children }) => {
+	video: ({ attributes, children }) => {
 		if (typeof attributes === 'string') {
 			attributes = getWidthAndHeight(attributes);
 		}
@@ -176,26 +176,29 @@ const BBTags: Partial<Record<string, BBTag>> = {
 			({ width, height, ...attributes } = attributes);
 		}
 
-		let videoID: string | undefined;
+		let youtubeVideoID: string | undefined;
 
 		if (typeof children === 'string') {
-			videoID = children.match(videoIDTest)?.[1];
+			youtubeVideoID = children.match(youTubeVideoIDTest)?.[1];
 		}
 
-		return (
+		const controls = !(
+			attributes instanceof Object
+			&& attributes.controls === '0'
+		);
+
+		return youtubeVideoID ? (
 			<iframe
 				src={
-					videoID
-						? `https://www.youtube.com/embed/${videoID}?${new URLSearchParams({
-							// By default, disable showing related videos from channels other than the owner of the embedded video.
-							rel: '0',
-							...attributes instanceof Object && (
-								attributes as Record<string, string>
-							)
-						})}`
-						: undefined
+					`https://www.youtube.com/embed/${youtubeVideoID}?${new URLSearchParams({
+						// By default, disable showing related videos from channels other than the owner of the embedded video.
+						rel: '0',
+						...attributes instanceof Object && (
+							attributes as Record<string, string>
+						)
+					})}`
 				}
-				// YouTube requires embedded players to have a viewport that is at least 200x200.
+				// YouTube requires embedded players to have a viewport that is at least 200x200 pixels.
 				// Source: https://developers.google.com/youtube/iframe_api_reference#Requirements
 				width={
 					width
@@ -208,6 +211,38 @@ const BBTags: Partial<Record<string, BBTag>> = {
 						: 450
 				}
 				allowFullScreen
+			/>
+		) : (
+			<video
+				src={
+					typeof children === 'string'
+						? children
+						: undefined
+				}
+				width={width}
+				height={height}
+				autoPlay={
+					attributes instanceof Object && !(
+						attributes.autoplay === undefined
+						|| attributes.autoplay === '0'
+					)
+				}
+				controls={controls}
+				controlsList={
+					controls
+						? (
+							attributes instanceof Object
+								? attributes.controlslist
+								: undefined
+						) ?? 'nodownload'
+						: undefined
+				}
+				loop={
+					attributes instanceof Object && !(
+						attributes.loop === undefined
+						|| attributes.loop === '0'
+					)
+				}
 			/>
 		);
 	},
@@ -226,8 +261,8 @@ const BBTags: Partial<Record<string, BBTag>> = {
 						? children
 						: undefined
 				)}
-				width={width ? +width : undefined}
-				height={height ? +height : undefined}
+				width={width || undefined}
+				height={height || undefined}
 			/>
 		);
 	},

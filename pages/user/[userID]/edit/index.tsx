@@ -2,7 +2,7 @@ import Page from 'components/Page';
 import { getUser, setUser } from 'lib/client/users';
 import type { PrivateUser } from 'lib/client/users';
 import { Perm } from 'lib/client/perms';
-import { permToGetUserInPage } from 'lib/server/perms';
+import { permToGetUserInPage } from 'lib/server/permToGetUser';
 import { getPrivateUser } from 'lib/server/users';
 import { withErrorPage } from 'lib/client/errors';
 import { withStatusCode } from 'lib/server/errors';
@@ -105,7 +105,8 @@ const Component = withErrorPage<ServerSideProps>(({ privateUser: initialPrivateU
 										<FieldBoxRow
 											type="checkbox"
 											name="settings.favsPublic"
-											label="Public Favorites"
+											// "Favorites" is shortened to "Favs" here because fitting the label on one line looks nicer.
+											label="Public Favs"
 											help="Allows others to publicly view your favorite adventures."
 										/>
 										<BoxRow>

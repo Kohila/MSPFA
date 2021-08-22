@@ -1,4 +1,4 @@
-import { MAX_LATEST_PAGES } from 'components/Basement';
+import { MAX_LATEST_PAGES, NEWS_POSTS_PER_REQUEST } from 'components/Basement';
 import type { ClientPreviousPageIDs } from 'components/StoryViewer';
 import { uniqBy } from 'lodash';
 import { withErrorPage } from 'lib/client/errors';
@@ -13,46 +13,44 @@ import { getPublicStory, getStoryByUnsafeID, getClientPagesAround } from 'lib/se
 import users, { getPublicUser } from 'lib/server/users';
 import type { integer } from 'lib/types';
 import dynamic from 'next/dynamic';
+import type { ClientNews } from 'lib/client/news';
+import { getClientNews } from 'lib/server/news';
 
 const Homepage = dynamic(() => import('components/Homepage'));
 const StoryViewer = dynamic(() => import('components/StoryViewer'));
 
 type ServerSideProps = {
 	userCache?: never,
-	publicStory?: never,
+	story?: never,
 	pages?: never,
 	previousPageIDs?: never,
-	latestPages?: never
+	latestPages?: never,
+	newsPosts?: never
 } | {
 	userCache: PublicUser[],
-	publicStory: PublicStory,
+	story: PublicStory,
 	pages: Record<StoryPageID, ClientStoryPage | null>,
 	previousPageIDs: ClientPreviousPageIDs,
-	latestPages: StoryLogListings
+	latestPages: StoryLogListings,
+	newsPosts: ClientNews[]
 } | {
 	statusCode: integer
 };
 
 const Component = withErrorPage<ServerSideProps>(({
 	userCache: initialUserCache,
-	publicStory,
-	pages,
-	previousPageIDs,
-	latestPages
+	...props
 }) => {
 	const { cacheUser } = useUserCache();
 	initialUserCache?.forEach(cacheUser);
 
 	return (
-		publicStory
+		props.story
 			? (
 				<StoryViewer
 					// This key is to make the `StoryViewer`'s states not preserve between different stories.
-					key={publicStory.id}
-					story={publicStory}
-					pages={pages!}
-					previousPageIDs={previousPageIDs!}
-					latestPages={latestPages!}
+					key={props.story.id}
+					{...props}
 				/>
 			)
 			: <Homepage />
@@ -76,7 +74,6 @@ export const getServerSideProps = withStatusCode<ServerSideProps>(async ({ req, 
 		return { props: { statusCode: 404 } };
 	}
 
-	/** Whether the user is in preview mode (which allows accessing unpublished pages) and has permission to be in preview mode. */
 	const previewMode = 'preview' in query;
 
 	if ((
@@ -128,19 +125,26 @@ export const getServerSideProps = withStatusCode<ServerSideProps>(async ({ req, 
 		}
 	}
 
+	const newsPosts = story.news.slice(0, NEWS_POSTS_PER_REQUEST);
+
 	return {
 		props: {
 			userCache: await users.find!({
 				_id: {
-					$in: uniqBy([story.owner, ...story.editors], String)
+					$in: uniqBy([
+						story.owner,
+						...story.editors,
+						...newsPosts.map(({ author }) => author)
+					], String)
 				},
 				willDelete: { $exists: false }
 			}).map(getPublicUser).toArray(),
-			publicStory: getPublicStory(story),
+			story: getPublicStory(story),
 			pages: clientPages,
 			// The reason this is sent to the client rather than having SSR and the client compute it a second time is as an optimization (and also it's simpler code).
 			previousPageIDs: clientPreviousPageIDs,
-			latestPages
+			latestPages,
+			newsPosts: newsPosts.map(getClientNews)
 		}
 	};
 });

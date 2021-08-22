@@ -1,6 +1,5 @@
 @use 'sass:math';
 @use 'sass:map';
-@use 'styles/general' as *;
 @use 'styles/themes' as *;
 
 // Applies a pixelated 3D depth effect behind the button. Lowers the depth on `:active`.
@@ -64,9 +63,6 @@
 	display: inline-block;
 	box-sizing: content-box;
 	user-select: none;
-	font-family: Homestuck-Regular;
-	font-size: 1.5em;
-	font-weight: normal;
 	border: none;
 	position: relative;
 	padding: 1px 8px;
@@ -77,6 +73,8 @@
 
 	&:not(.icon-button) {
 		@include theme(color, button-text-color);
+		@include theme(font, heading-font);
+		font-size: 1.5em;
 	}
 
 	& + &:not(.icon-button) {
@@ -131,7 +129,7 @@
 		background: inherit;
 	}
 
-	&:focus:not(:active)::after {
+	&:focus:not(:disabled, :active)::after {
 		// An amount of brightness to add to the background color (between 0 and 1).
 		$added-brightness: 0.2;
 		// This formula adds a constant amount of brightness independently of the initial brightness. It works. Just trust me; I tested it on Desmos.
@@ -145,8 +143,8 @@
 	}
 
 	&.alt {
-		--button-color: var(--button-alt-color);
-		--button-text-color: var(--button-text-alt-color);
+		--button-color: var(--alt-button-color);
+		--button-text-color: var(--alt-button-text-color);
 	}
 
 	// The button's content (icon or label).
@@ -159,10 +157,7 @@
 }
 
 .icon-button {
-	// Setting `font-size` to `1em` is necessary even if the button is empty, so that `1ch` measures the current font size correctly.
-	font-size: 1em;
-	font-family: $monospace;
-	font-weight: bold;
+	font-size: 1rem;
 	padding: 1px;
 	line-height: 0;
 

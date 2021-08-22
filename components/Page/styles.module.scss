@@ -1,4 +1,4 @@
-@use 'styles/general' as *;
+@use 'styles/themes' as *;
 
 #preload-resources {
 	position: fixed;
@@ -17,7 +17,7 @@
 
 	@include mobile {
 		width: 100%;
-		// Don't set `overflow-x: hidden;` here because it breaks child elements with `position: sticky;`.
+		// Don't set `overflow-x: hidden` here because it breaks child elements with `position: sticky`.
 	}
 }
 
@@ -25,7 +25,7 @@
 	&-container {
 		display: flex;
 		justify-content: space-around;
-		padding: 2px 0 5px 0;
+		padding: 2px 0 5px;
 	}
 
 	flex-shrink: 0;
@@ -40,19 +40,24 @@
 	}
 }
 
-main.padded {
-	padding: 16px 56px 56px 56px;
+main {
+	// For old browsers.
+	display: block;
 
-	@include mobile {
-		padding-left: 0;
-		padding-right: 0;
+	&.padded {
+		padding: 16px 56px 56px;
+
+		@include mobile {
+			padding-left: 0;
+			padding-right: 0;
+		}
 	}
 }
 
 #copyright {
 	padding: 0.4em 1.6em;
 	line-height: 1.6em;
+	@include theme(font, alt-font);
 	font-size: x-small;
-	font-family: $sans-serif;
 	text-align: center;
 }

@@ -1,4 +1,4 @@
-@use 'styles/general' as *;
+@use 'styles/themes' as *;
 
 #story-editor {
 	&-options {
@@ -14,9 +14,9 @@
 	}
 
 	&-code-fields {
-		display: flex;
-
 		@include desktop {
+			display: flex;
+
 			& > * {
 				width: 50%;
 			}

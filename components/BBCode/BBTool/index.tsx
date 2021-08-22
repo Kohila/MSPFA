@@ -4,7 +4,6 @@ import useFunction from 'lib/client/useFunction';
 import { BBFieldContext } from 'components/BBCode/BBField';
 import Button from 'components/Button';
 import Dialog from 'lib/client/Dialog';
-import { videoIDTest } from 'components/BBCode/BBTags';
 import InlineRowSection from 'components/Box/InlineRowSection';
 import FieldBoxRow from 'components/Box/FieldBoxRow';
 import Label from 'components/Label';
@@ -14,6 +13,8 @@ import Link from 'components/Link';
 import { getChangedValues } from 'lib/client/forms';
 import IDPrefix from 'lib/client/IDPrefix';
 import { useLatest } from 'react-use';
+import { youTubeVideoIDTest } from '../BBTags';
+import type { integer } from 'lib/types';
 
 const defaultBBPreview = 'The quick brown fox jumps over the lazy dog.';
 
@@ -219,32 +220,55 @@ const tags: Record<string, {
 	spoiler: {
 		title: 'Spoiler',
 		initialValues: {
-			open: '',
-			close: ''
+			advancedMode: false,
+			show: '',
+			hide: ''
 		},
-		content: (
+		content: ({ values: { advancedMode } }) => (
 			<InlineRowSection>
+				{!advancedMode && (
+					<FieldBoxRow
+						name="attributes"
+						label="Spoiler Name"
+						help={'The name used in the spoiler\'s button text.\n\nFor example, setting this to "Pesterlog" makes the button say "Show Pesterlog" when the spoiler is closed and "Hide Pesterlog" when the spoiler is open.\n\nLeaving this empty makes the button say "Show" or "Hide" with nothing after it.'}
+						autoFocus
+						placeholder="Optional"
+					/>
+				)}
 				<FieldBoxRow
-					name="open"
-					label={'"Show" Button Text'}
-					autoFocus
-					placeholder="Optional"
+					type="checkbox"
+					name="advancedMode"
+					label="Advanced Mode"
 				/>
-				<FieldBoxRow
-					name="close"
-					label={'"Hide" Button Text'}
-					placeholder="Optional"
-				/>
+				{advancedMode && (
+					<>
+						<FieldBoxRow
+							name="show"
+							label={'"Show" Button Text'}
+							help={'The spoiler\'s button text when the spoiler is closed.'}
+							autoFocus
+							placeholder="Optional"
+						/>
+						<FieldBoxRow
+							name="hide"
+							label={'"Hide" Button Text'}
+							help={'The spoiler\'s button text when the spoiler is open.'}
+							placeholder="Optional"
+						/>
+					</>
+				)}
 			</InlineRowSection>
 		),
-		getProps: ({ values: { open, close } }) => ({
+		getProps: ({ values: { attributes, advancedMode, show, hide } }) => ({
 			attributes: (
-				open || close
-					? {
-						...!!open && { open },
-						...!!close && { close }
-					}
-					: undefined
+				advancedMode
+					? show || hide
+						? {
+							...!!show && { show },
+							...!!hide && { hide }
+						}
+						: undefined
+					: attributes || undefined
 			)
 		})
 	},
@@ -305,69 +329,76 @@ const tags: Record<string, {
 		}),
 		selectAfter: true
 	},
-	youtube: {
-		title: 'YouTube Embed',
+	video: {
+		title: 'Video Embed',
 		initialValues: {
+			width: '',
+			height: '',
 			autoplay: false,
 			controls: true,
 			loop: false
 		},
-		content: (
-			<InlineRowSection>
-				<FieldBoxRow
-					type="text"
-					name="children"
-					label="YouTube Video URL/ID"
-					required
-					autoFocus
-					pattern={videoIDTest.source}
-					autoComplete="off"
-					help={(
-						<>
-							Examples:
-							<ul>
-								<li>https://www.youtube.com/watch?v=7wiNUBaK-6M</li>
-								<li>https://youtu.be/7wiNUBaK-6M</li>
-								<li>7wiNUBaK-6M</li>
-							</ul>
-						</>
-					)}
-				/>
-				{/* YouTube requires embedded players to have a viewport that is at least 200x200. */}
-				{/* Source: https://developers.google.com/youtube/iframe_api_reference#Requirements */}
-				{/* Also, width and height are required fields here since the `iframe` has no good way of determining a good default size for the video. */}
-				<FieldBoxRow
-					type="number"
-					name="width"
-					label="Width"
-					required
-					min={200}
-				/>
-				<FieldBoxRow
-					type="number"
-					name="height"
-					label="Height"
-					required
-					min={200}
-				/>
-				<FieldBoxRow type="checkbox" name="autoplay" label="Autoplay" />
-				<FieldBoxRow type="checkbox" name="controls" label="Show Player Controls" />
-				<FieldBoxRow type="checkbox" name="loop" label="Loop" />
-				<BoxRow>
-					<Link
-						href="https://developers.google.com/youtube/player_parameters#Parameters"
-						target="_blank"
-					>
-						Advanced Attribute List
-					</Link>
-				</BoxRow>
-			</InlineRowSection>
-		),
+		content: ({ values: { children: url } }) => {
+			const urlFromYouTube = youTubeVideoIDTest.test(url);
+
+			return (
+				<InlineRowSection>
+					<FieldBoxRow
+						type="url"
+						name="children"
+						label="Video URL"
+						required
+						autoFocus
+						autoComplete="off"
+						help={(
+							<>
+								Examples:
+								<ul>
+									<li>https://example.com/video.mp4</li>
+									<li>https://www.youtube.com/watch?v=7wiNUBaK-6M</li>
+									<li>https://youtu.be/7wiNUBaK-6M</li>
+								</ul>
+							</>
+						)}
+					/>
+					{/* YouTube requires embedded players to have a viewport that is at least 200x200 pixels. */}
+					{/* Source: https://developers.google.com/youtube/iframe_api_reference#Requirements */}
+					{/* Also, width and height are required fields here since the `iframe` has no good way of determining a good default size for the video. */}
+					<FieldBoxRow
+						type="number"
+						name="width"
+						label="Width"
+						required={urlFromYouTube}
+						min={urlFromYouTube ? 200 : 0}
+					/>
+					<FieldBoxRow
+						type="number"
+						name="height"
+						label="Height"
+						required={urlFromYouTube}
+						min={urlFromYouTube ? 200 : 0}
+					/>
+					<FieldBoxRow type="checkbox" name="autoplay" label="Autoplay" />
+					<FieldBoxRow type="checkbox" name="controls" label="Show Controls" />
+					<FieldBoxRow type="checkbox" name="loop" label="Loop" />
+					{/* TODO: Put this in a BBCode guide instead. */}
+					<BoxRow>
+						<Link
+							href="https://developers.google.com/youtube/player_parameters#Parameters"
+							target="_blank"
+						>
+							Advanced YouTube Attribute List
+						</Link>
+					</BoxRow>
+				</InlineRowSection>
+			);
+		},
 		getProps: ({
 			initialValues,
 			values: { children, ...values }
 		}) => {
 			const changedValues = getChangedValues(initialValues, values);
+			console.log(initialValues, values);
 
 			return {
 				attributes: changedValues && Object.fromEntries(
@@ -482,15 +513,23 @@ const tags: Record<string, {
 // The above `tags` must be in the same order as the BB tool icon sheet.
 
 /** The indexes of each tag within the BB tool icon sheet. */
-const tagIndexes = Object.fromEntries(
-	Object.keys(tags).map(
-		(tagName, i) => [tagName, i]
-	)
-);
+const tagIndexes: Record<string, integer> = {};
+const tagNames = Object.keys(tags);
+for (let i = 0; i < tagNames.length; i++) {
+	tagIndexes[tagNames[i]] = i;
+}
 
 /** Escapes a user-inputted attribute value for use in BBCode. */
-const escapeAttribute = (value: string, handleEqualSigns?: boolean) => {
-	if (value.includes(']') || (handleEqualSigns && value.includes('='))) {
+const escapeAttribute = (
+	/** The value of the attribute. */
+	value: string,
+	/** Whether equal signs need to be escaped. */
+	escapeEqualSigns?: boolean
+) => {
+	if (
+		value.includes(']')
+		|| (escapeEqualSigns && value.includes('='))
+	) {
 		if (value.includes('"') && !value.includes('\'')) {
 			return `'${value}'`;
 		}
@@ -508,7 +547,7 @@ const escapeAttribute = (value: string, handleEqualSigns?: boolean) => {
 
 	if (value[0] === '\'') {
 		if (value.includes('"')) {
-			return `&apos;${value.slice(1)}`;
+			return `&#39;${value.slice(1)}`;
 		}
 
 		return `"${value}"`;
@@ -550,10 +589,14 @@ const BBTool = ({ tag: tagName }: BBToolProps) => {
 						textAreaRef.current.selectionEnd
 					);
 
-					const tagProps: NewBBTagProps = {
+					/** Information about this instance of the BB tag, including children, attributes, and other form values. */
+					const tagData: NewBBTagProps = {
 						children,
 						// This needs to initially be an empty string and not `undefined` so that the form's initial values include this property, and any fields with `name="attributes"` are initially Formik-controlled.
-						attributes: ''
+						attributes: '',
+						...tag.initialValues instanceof Function
+							? tag.initialValues(children)
+							: tag.initialValues
 					};
 
 					if (tag.content) {
@@ -573,12 +616,7 @@ const BBTool = ({ tag: tagName }: BBToolProps) => {
 									)}
 								</IDPrefix.Provider>
 							),
-							initialValues: Object.assign(
-								tagProps,
-								tag.initialValues instanceof Function
-									? tag.initialValues(children)
-									: tag.initialValues
-							),
+							initialValues: { ...tagData },
 							actions: [
 								{ label: 'Okay', autoFocus: false },
 								'Cancel'
@@ -609,7 +647,7 @@ const BBTool = ({ tag: tagName }: BBToolProps) => {
 						);
 
 						Object.assign(
-							tagProps,
+							tagData,
 							dialog.form!.values,
 							// Spread the updated selection in the `children` value to overwrite the outdated value in the dialog form's values.
 							{ children },
@@ -617,17 +655,21 @@ const BBTool = ({ tag: tagName }: BBToolProps) => {
 						);
 					}
 
-					const openTag = `[${tagName}${
-						tagProps.attributes
-							? tagProps.attributes instanceof Object
-								? (
-									Object.entries(tagProps.attributes).map(
-										([name, value]) => ` ${name}=${escapeAttribute(value!.toString(), true)}`
-									).join('')
-								)
-								: `=${escapeAttribute(tagProps.attributes.toString())}`
-							: ''
-					}]`;
+					let openTag = `[${tagName}`;
+					if (tagData.attributes) {
+						if (tagData.attributes instanceof Object) {
+							for (const key of Object.keys(tagData.attributes)) {
+								const value = tagData.attributes[key];
+								if (value !== undefined) {
+									openTag += ` ${key}=${escapeAttribute(value.toString(), true)}`;
+								}
+							}
+						} else {
+							openTag += `=${escapeAttribute(tagData.attributes.toString())}`;
+						}
+					}
+					openTag += ']';
+
 					const closeTag = `[/${tagName}]`;
 
 					const selectionStart = textAreaRef.current.selectionStart;
@@ -635,7 +677,7 @@ const BBTool = ({ tag: tagName }: BBToolProps) => {
 					setValue(
 						textAreaRef.current.value.slice(0, selectionStart)
 						+ openTag
-						+ tagProps.children
+						+ tagData.children
 						+ closeTag
 						+ textAreaRef.current.value.slice(textAreaRef.current.selectionEnd, textAreaRef.current.value.length)
 					);
@@ -650,12 +692,12 @@ const BBTool = ({ tag: tagName }: BBToolProps) => {
 							textAreaRef.current.selectionStart = textAreaRef.current.selectionEnd = (
 								selectionStart
 								+ openTag.length
-								+ tagProps.children.length
+								+ tagData.children.length
 								+ closeTag.length
 							);
 						} else {
 							textAreaRef.current.selectionStart = selectionStart + openTag.length;
-							textAreaRef.current.selectionEnd = textAreaRef.current.selectionStart + tagProps.children.length;
+							textAreaRef.current.selectionEnd = textAreaRef.current.selectionStart + tagData.children.length;
 						}
 					});
 				})

@@ -45,8 +45,14 @@
 }
 
 .page-field {
-	&-container-title input {
-		width: 100%;
+	&-container {
+		&-title input {
+			width: 100%;
+		}
+
+		&-content .bb-preview > .spoiler-content {
+			text-align: center;
+		}
 	}
 
 	&-columns {
@@ -83,7 +89,7 @@
 	}
 }
 
-#publish-tip {
+#story-page-publish-tip {
 	font-size: 0.875em;
 	opacity: 0.5;
 	max-width: fit-content;

@@ -338,7 +338,7 @@ const StoryEditorPageListing = React.memo(({
 						{
 							// To reduce clutter, only show the tip on the default `action` setting.
 							values.action === 'publish' && (
-								<Row id="publish-tip">
+								<Row id="story-page-publish-tip">
 									Tip: Shift+click the publish button to bypass this dialog and publish immediately.
 								</Row>
 							)
@@ -659,7 +659,7 @@ const StoryEditorPageListing = React.memo(({
 					<>
 						<Button
 							href={`/?s=${storyID}&p=${page.id}${pageStatus === 'published' ? '' : '&preview=1'}`}
-							target="_blank"
+							target={pageStatus === 'published' ? undefined : '_blank'}
 							disabled={isSubmitting}
 						>
 							{pageStatus === 'published' ? 'View' : 'Preview'}
