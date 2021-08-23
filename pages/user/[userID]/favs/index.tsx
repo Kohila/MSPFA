@@ -7,7 +7,7 @@ import { withStatusCode } from 'lib/server/errors';
 import Box from 'components/Box';
 import BoxSection from 'components/Box/BoxSection';
 import Link from 'components/Link';
-import BoxRow from 'components/Box/BoxRow';
+import Row from 'components/Row';
 import type { ServerStory } from 'lib/server/stories';
 import stories, { getPublicStory } from 'lib/server/stories';
 import type { PublicStory } from 'lib/client/stories';
@@ -31,20 +31,20 @@ const Component = withErrorPage<ServerSideProps>(({ publicUser, favsPublic, publ
 	<Page withFlashyTitle heading="Favorite Adventures">
 		<Box>
 			<BoxSection heading={`${publicUser.name}'s Favorites`}>
-				<BoxRow>
+				<Row>
 					<Button
 						className="small"
 						href={`/user/${publicUser.id}`}
 					>
 						Back to Profile
 					</Button>
-				</BoxRow>
+				</Row>
 				{!favsPublic && (
-					<BoxRow id="favs-public-tip">
+					<Row id="favs-public-tip">
 						Only you can see your favorites. If you want others to be able to see, enable public favorites in <Link href={`/user/${publicUser.id}/edit`}>your profile settings</Link>.
-					</BoxRow>
+					</Row>
 				)}
-				<BoxRow>
+				<Row>
 					{(publicStories.length
 						? (
 							<List listing={StoryListing}>
@@ -53,7 +53,7 @@ const Component = withErrorPage<ServerSideProps>(({ publicUser, favsPublic, publ
 						)
 						: 'This user has no favorite adventures.'
 					)}
-				</BoxRow>
+				</Row>
 			</BoxSection>
 		</Box>
 	</Page>

@@ -4,15 +4,15 @@ import { permToGetUserInPage } from 'lib/server/permToGetUser';
 import { withErrorPage } from 'lib/client/errors';
 import { withStatusCode } from 'lib/server/errors';
 import Box from 'components/Box';
-import BoxRowSection from 'components/Box/BoxRowSection';
-import BoxRow from 'components/Box/BoxRow';
+import BoxSection from 'components/Box/BoxSection';
+import Row from 'components/Row';
 import BoxFooter from 'components/Box/BoxFooter';
 import Button from 'components/Button';
 import type { APIClient } from 'lib/client/api';
 import api from 'lib/client/api';
 import Dialog from 'lib/client/Dialog';
-import InlineRowSection from 'components/Box/InlineRowSection';
-import FieldBoxRow from 'components/Box/FieldBoxRow';
+import LabeledGrid from 'components/LabeledGrid';
+import LabeledGridField from 'components/LabeledGrid/LabeledGridField';
 import randomStoryNames from 'lib/client/randomStoryNames.json';
 import type { PrivateStory } from 'lib/client/stories';
 import stories, { getPrivateStory } from 'lib/server/stories';
@@ -43,9 +43,9 @@ const promptNewStory = async () => {
 			title: ''
 		},
 		content: (
-			<InlineRowSection>
-				<BoxRow>What will the title of this new adventure be?</BoxRow>
-				<FieldBoxRow
+			<LabeledGrid>
+				<Row>What will the title of this new adventure be?</Row>
+				<LabeledGridField
 					name="title"
 					label="Enter Title"
 					required
@@ -55,7 +55,7 @@ const promptNewStory = async () => {
 					size={Math.max(20, randomStoryName.length)}
 					autoComplete="off"
 				/>
-			</InlineRowSection>
+			</LabeledGrid>
 		),
 		actions: [
 			{ label: 'Start!', autoFocus: false },
@@ -84,18 +84,16 @@ type ServerSideProps = {
 const Component = withErrorPage<ServerSideProps>(({ privateStories }) => (
 	<Page withFlashyTitle heading="Your Adventures">
 		<Box>
-			<BoxRowSection heading="Adventures">
-				<BoxRow>
-					{(privateStories.length
-						? (
-							<List listing={StoryListing}>
-								{privateStories.sort((a, b) => b.updated - a.updated)}
-							</List>
-						)
-						: 'You haven\'t started any adventures yet! Click the button below to begin.'
-					)}
-				</BoxRow>
-			</BoxRowSection>
+			<BoxSection heading="Adventures">
+				{(privateStories.length
+					? (
+						<List listing={StoryListing}>
+							{privateStories.sort((a, b) => b.updated - a.updated)}
+						</List>
+					)
+					: 'You haven\'t started any adventures yet! Click the button below to begin.'
+				)}
+			</BoxSection>
 			<BoxFooter>
 				<Button onClick={promptNewStory}>
 					New Adventure!

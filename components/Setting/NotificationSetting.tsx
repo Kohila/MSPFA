@@ -1,28 +1,29 @@
 import { Field } from 'formik';
-import type { ExclusiveFieldBoxRowProps } from 'components/Box/FieldBoxRow';
-import BoxRow from 'components/Box/LabeledBoxRow';
+import type { ExclusiveLabeledGridFieldProps } from 'components/LabeledGrid/LabeledGridField';
+import LabeledGridRow from 'components/LabeledGrid/LabeledGridRow';
 
-export type NotificationSettingProps = ExclusiveFieldBoxRowProps;
+export type NotificationSettingProps = ExclusiveLabeledGridFieldProps;
 
+/** A `LabeledGridRow` to be placed in a `NotificationSettingGrid` containing a `Field` for a notification setting. */
 const NotificationSetting = ({ label, name, help }: NotificationSettingProps) => (
-	<BoxRow
+	<LabeledGridRow
 		label={label}
 		help={help}
 		customContent
 	>
-		<div className="box-row-content">
+		<div className="grid-row-content">
 			<Field
 				type="checkbox"
 				name={`${name}.email`}
 			/>
 		</div>
-		<div className="box-row-content">
+		<div className="grid-row-content">
 			<Field
 				type="checkbox"
 				name={`${name}.site`}
 			/>
 		</div>
-	</BoxRow>
+	</LabeledGridRow>
 );
 
 export default NotificationSetting;

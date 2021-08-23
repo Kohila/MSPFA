@@ -14,11 +14,10 @@ import Button from 'components/Button';
 import { getPrivateStory, getStoryByUnsafeID } from 'lib/server/stories';
 import type { PrivateStory } from 'lib/client/stories';
 import { StoryPrivacy, storyPrivacyNames, storyStatusNames } from 'lib/client/stories';
-import BoxRowSection from 'components/Box/BoxRowSection';
-import FieldBoxRow from 'components/Box/FieldBoxRow';
-import BoxRow from 'components/Box/BoxRow';
+import LabeledGridBoxSection from 'components/Box/LabeledGridBoxSection';
+import LabeledGridField from 'components/LabeledGrid/LabeledGridField';
 import IconImage from 'components/IconImage';
-import LabeledBoxRow from 'components/Box/LabeledBoxRow';
+import LabeledGridRow from 'components/LabeledGrid/LabeledGridRow';
 import UserField from 'components/UserField';
 import type { PublicUser } from 'lib/client/users';
 import { useUser } from 'lib/client/users';
@@ -167,10 +166,10 @@ const Component = withErrorPage<ServerSideProps>(({
 				<>
 					<Box>
 						<BoxSection heading="Deleted Adventure">
-							<BoxRow>
+							<Row>
 								<i>{privateStory.title}</i>
 								{` will be permanently deleted in ~${daysUntilDeletion} day${daysUntilDeletion === 1 ? '' : 's'}.`}
-							</BoxRow>
+							</Row>
 						</BoxSection>
 					</Box>
 					<BoxFooter>
@@ -267,15 +266,15 @@ const Component = withErrorPage<ServerSideProps>(({
 										</Button>
 									</BoxSection>
 									<BoxColumns>
-										<BoxRowSection id="story-editor-info" heading="Info">
-											<FieldBoxRow
+										<LabeledGridBoxSection id="story-editor-info" heading="Info">
+											<LabeledGridField
 												name="title"
 												label="Title"
 												autoComplete="off"
 												required
 												maxLength={50}
 											/>
-											<FieldBoxRow
+											<LabeledGridField
 												as="select"
 												name="status"
 												label="Status"
@@ -289,8 +288,8 @@ const Component = withErrorPage<ServerSideProps>(({
 														{(storyStatusNames as any)[status]}
 													</option>
 												))}
-											</FieldBoxRow>
-											<FieldBoxRow
+											</LabeledGridField>
+											<LabeledGridField
 												as="select"
 												name="privacy"
 												label="Privacy"
@@ -317,23 +316,23 @@ const Component = withErrorPage<ServerSideProps>(({
 														{(storyPrivacyNames as any)[privacy]}
 													</option>
 												))}
-											</FieldBoxRow>
-											<FieldBoxRow
+											</LabeledGridField>
+											<LabeledGridField
 												type="url"
 												name="icon"
 												label="Icon URL"
 												help="A direct URL to an image of your adventure's icon. The recommended image size is 150x150 pixels."
 											/>
-											<BoxRow>
+											<Row>
 												<IconImage
 													id="story-editor-icon"
 													src={values.icon}
 													alt="Your Adventure's Icon"
 												/>
-											</BoxRow>
-										</BoxRowSection>
-										<BoxRowSection id="story-editor-misc" heading="Misc">
-											<LabeledBoxRow label="Owner">
+											</Row>
+										</LabeledGridBoxSection>
+										<LabeledGridBoxSection id="story-editor-misc" heading="Misc">
+											<LabeledGridRow label="Owner">
 												<UserField
 													name="owner"
 													required
@@ -366,8 +365,8 @@ const Component = withErrorPage<ServerSideProps>(({
 														})
 													}
 												/>
-											</LabeledBoxRow>
-											<LabeledBoxRow
+											</LabeledGridRow>
+											<LabeledGridRow
 												labelProps={{
 													className: 'user-array-field-label'
 												}}
@@ -379,13 +378,13 @@ const Component = withErrorPage<ServerSideProps>(({
 													unique
 													readOnly={!ownerPerms}
 												/>
-											</LabeledBoxRow>
-											<FieldBoxRow
+											</LabeledGridRow>
+											<LabeledGridField
 												type="checkbox"
 												name="allowComments"
 												label="Allow Comments"
 											/>
-											<LabeledBoxRow
+											<LabeledGridRow
 												htmlFor={editingAnniversary ? 'field-anniversary-year' : undefined}
 												label="Creation Date"
 												help="This date is displayed publicly in your adventure info and used as the date for your anniversary banner."
@@ -410,15 +409,15 @@ const Component = withErrorPage<ServerSideProps>(({
 														)}
 													</>
 												)}
-											</LabeledBoxRow>
-											<FieldBoxRow
+											</LabeledGridRow>
+											<LabeledGridField
 												type="url"
 												name="banner"
 												label="Banner URL"
 												help={'A direct URL to an image of your adventure\'s anniversary banner. The recommended image size is 950x100 pixels.\n\nIf your adventure is public, is ongoing or complete, and has at least 200 favorites, this image will be displayed on the homepage for one week starting on the adventure\'s anniversary date.'}
 												placeholder="Optional"
 											/>
-										</BoxRowSection>
+										</LabeledGridBoxSection>
 									</BoxColumns>
 									<BoxSection id="story-editor-details" heading="Details">
 										<Row>
